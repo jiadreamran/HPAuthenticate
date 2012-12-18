@@ -1,0 +1,13 @@
+﻿@{
+    ViewBag.Title = "Login";
+}
+
+<h2>Login</h2>
+
+@Html.ValidationSummary()
+
+@using (Html.BeginForm()) {
+
+	@Html.Partial("_LoginForm")
+	
+}

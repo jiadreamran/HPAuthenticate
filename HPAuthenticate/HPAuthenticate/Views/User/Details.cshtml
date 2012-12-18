@@ -1,0 +1,218 @@
+﻿@model HPAuthenticate.ViewModels.UserViewModel
+@using libMatt.Formatters
+@using HPAuthenticate.Helpers
+
+@{
+	ViewBag.Title = "Details";
+}
+
+
+<h2>Property Descriptions</h2>
+
+<p>
+	These are properties you own or are authorized to produce groundwater for. 
+	To remove a property from this list, click the deletion icon (<img alt='Delete' src="@Url.Image("cross.png")"></img>) next to it.	
+</p>
+
+<p>Add property @Html.ActionLink("using owner name", "AddProperty") or <a href="@Url.Content("/hpuwcd/index.html?config=config-menu-ap.xml")">by map location</a>.</p>
+
+
+<table class='property_listing'>
+	<thead>
+		<tr>
+			<th></th> @* Flag column *@
+			<th>County</th>
+			<th>Parcel ID</th>
+			<th>Property description</th>
+			<th>Address</th>
+			<th>Owner name</th>
+			<th>My role</th>
+			<th></th>
+		</tr>
+	</thead>
+	<tbody>
+		@if (Model.Properties.Count == 0) {
+			<tr>
+				<td colspan='5'>No properties found! @Html.ActionLink("Add one now", "AddProperty").</td>
+			</tr>
+		} else {
+			foreach (var propAssoc in Model.Properties) {
+				<tr>
+					<td>
+						@if (propAssoc.Property.IsAppraisalRollDataModified) {
+							<img src="@Url.Image("asterisk.png")" alt="*" title="Owner data has been user-modified and differs from appraisal district data." />
+						}
+					</td>
+					<td>@propAssoc.Property.County</td>
+					<td>@propAssoc.Property.ParcelId</td>
+					<td>@propAssoc.Property.Description</td>
+					<td>
+						@propAssoc.Property.Address.Replace(' ', (char)160).Trim(',', ' ', (char)160) <br />
+						@string.Format("{1},{0}{2}{0}{3}", (char)160, @propAssoc.Property.City, @propAssoc.Property.State, @propAssoc.Property.Zip).Trim(',', ' ', (char)160)
+					</td>
+					<td>@propAssoc.Property.OwnerName</td>
+					<td>@propAssoc.Role.Description()</td>
+					<td>
+						@using (Html.BeginForm("DeleteProperty", "User", FormMethod.Post)) {
+							@Html.Hidden("clientPropertyId", propAssoc.Id)
+							<input type="image" data-needs-confirm="true" src="@Url.Image("cross.png")"></input>
+						}
+					</td>
+				</tr>
+			}
+		}
+	</tbody>
+</table>
+
+
+
+<h2>User Details</h2>
+
+<h3>Personal Information</h3>
+
+@using (Html.BeginForm(ViewContext.Controller.ValueProvider.GetValue("action").RawValue.ToString(), ViewContext.Controller.ValueProvider.GetValue("controller").RawValue.ToString(), FormMethod.Post, new { autocomplete = "off" })) {
+	@Html.HiddenFor(m => m.User.Id)
+
+	@Html.ValidationSummary(true)
+	<dl class='form'>
+
+		<dt>
+			@Html.LabelFor(m => m.User.CourtesyTitleId)
+		</dt>
+		<dd>
+			@Html.DropDownListFor(m => m.User.CourtesyTitleId, Model.AvailableCourtesyTitles)
+			@Html.ValidationMessageFor(m => m.User.CourtesyTitleId)
+		</dd>
+
+
+		<dt>
+			@Html.LabelFor(m => m.User.FirstName)*
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.FirstName)
+			@Html.ValidationMessageFor(m => m.User.FirstName)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.MiddleInitial)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.MiddleInitial)
+			@Html.ValidationMessageFor(m => m.User.MiddleInitial)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.LastNameOrCompany)*
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.LastNameOrCompany)
+			@Html.ValidationMessageFor(m => m.User.LastNameOrCompany)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.Suffix)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.Suffix)
+			@Html.ValidationMessageFor(m => m.User.Suffix)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.PreferredName)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.PreferredName)
+			@Html.ValidationMessageFor(m => m.User.PreferredName)
+		</dd>
+
+
+
+
+
+		<dt>Address</dt>
+		<dd>
+			@Html.HiddenFor(m => m.AddressId)
+			@Html.TextBoxFor(m => m.Address)
+			@Html.ValidationMessageFor(m => m.Address)
+		</dd>
+		<dt>City</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.City)
+			@Html.ValidationMessageFor(m => m.City)
+		</dd>
+		<dt>State</dt>
+		<dd>
+			@Html.DropDownListFor(m => m.State, HPAuthenticate.ViewModels.UserViewModel.AvailableStates)
+			@Html.ValidationMessageFor(m => m.State)
+		</dd>
+		<dt>Postal Code</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.PostalCode)
+			@Html.ValidationMessageFor(m => m.PostalCode)
+		</dd>
+		<dt>
+			Phone number(s)*<br />
+			<span class='hint'>E.g. (806) 762-0181 x123</span><br />
+			<span class='hint'>Provide at least one number</span>
+		</dt>
+		<dd>
+			@Html.Partial("_PhoneNumberForm", Model)
+
+			@Html.ValidationMessageFor(m => m.User.PhoneNumbers)
+		</dd>
+
+		<dt>
+			Password<br />
+			<span class='hint'>(leave blank to keep the same; must be at least 6 characters if changing)</span></dt>
+		<dd>
+			@Html.PasswordFor(m => m.Password)
+			@Html.ValidationMessageFor(m => m.Password)
+		</dd>
+		<dt>Confirm password</dt>
+		<dd>
+			@Html.PasswordFor(m => m.PasswordConfirmation)
+			@Html.ValidationMessageFor(m => m.PasswordConfirmation)
+		</dd>
+		<dt></dt>
+		<dd>
+			<input type='submit' value='Save changes'></input>
+		</dd>
+	</dl>
+}
+
+<h3>Update Email Address</h3>
+@using (Html.BeginForm("EditEmail", "User")) {
+	<p>
+		Note: Be sure to enter an email address you have access to. Changing your email address will send
+		a confirmation message with an activation link to the address you specify, and you will need to
+		follow the new link to re-activate your account.
+	</p>
+	
+	<p>
+		<strong>Important:</strong> Remember that after changing your email address, you will need to log in
+		using the new address, not your old one.
+	</p>
+
+	<dl class="form">
+		<dt>New email address:</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.Email)
+			@Html.ValidationMessageFor(m => m.Email)
+		</dd>
+		<dt></dt>
+		<dd>
+			<input type='submit' value='Change Email' />
+		</dd>
+	</dl>
+}
+
+
+
+<script type="text/javascript">
+	$(document).ready(function () {
+		$('input[data-needs-confirm=true]').click(function () {
+			return confirm('Are you sure you want to remove this property from your account?');
+		});
+	});
+
+</script>

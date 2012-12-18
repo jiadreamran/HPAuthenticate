@@ -1,0 +1,797 @@
+﻿/* Eric Meyer Reset CSS */
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+
+
+
+/*----------------------------------------------------------
+The base color for this template is #5c87b2. If you'd like
+to use a different color start by replacing all instances of
+#5c87b2 with your new color.
+----------------------------------------------------------*/
+body {
+    background: #424695 url(../images/hpwdback.gif) 0 0 repeat;
+    font-size: .85em;
+    font-family: "Trebuchet MS", Verdana, Helvetica, Sans-Serif;
+    margin: 0;
+    padding: 0;
+    color: #696969;
+}
+
+a:link {
+    color: #00f;
+    text-decoration: underline;
+}
+
+a:visited {
+    color: #505abc;
+}
+
+a:hover {
+    color: #1d60ff;
+    text-decoration: none;
+}
+
+a:active {
+    color: #12eb87;
+}
+
+p, ul {
+    margin-bottom: 20px;
+    line-height: 1.6em;
+}
+
+header,
+footer,
+nav,
+section {
+    display: block;
+}
+
+/* HEADINGS   
+----------------------------------------------------------*/
+h1, h2, h3, h4, h5, h6 {
+    font-size: 1.5em;
+    color: #000;
+    clear: both;
+}
+
+h1 {
+	font-size: 32px;
+	margin: 0;
+	padding: 0;
+}
+
+h2 {
+    padding: 10px;
+    margin: 0 -10px;
+    background: #e3e3d2;
+}
+
+h3 {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 5px 0;
+    padding: 0 20px;
+    border-bottom: 3px solid #e3e3d2;
+}
+
+h4 {
+    font-size: 1.1em;
+}
+
+h5, h6 {
+    font-size: 1em;
+}
+
+/* PRIMARY LAYOUT ELEMENTS   
+----------------------------------------------------------*/
+
+/* you can specify a greater or lesser percentage for the 
+page width. Or, you can specify an exact pixel width. */
+.page {
+    width: 738px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+header, #header {
+    position: relative;
+    margin: 0;
+    color: #000;
+    padding: 0;
+}
+
+header h1, #header h1 {
+	font-size: 6px;
+    padding: 0;
+    margin: 0;
+    color: #fff;
+    border: none;
+	background: #2e58be;
+    /*
+    line-height: 2em;
+    font-size: 32px !important;
+    text-shadow: 1px 1px 2px #111;
+*/
+}
+
+#main {
+    padding: 10px;
+    background-color: #fff;
+}
+
+footer, 
+#footer {
+	font-family: Verdana, Tahoma, Helvetica, Arial, sans-serif;
+	font-size: 10pt;
+    background-color: #fff;
+    color: #999;
+    padding: 10px 0;
+    text-align: center;
+    line-height: normal;
+    margin: 0 0 30px 0;
+    font-size: .9em;
+    border-radius: 0 0 4px 4px;
+    -webkit-border-radius: 0 0 4px 4px;
+    -moz-border-radius: 0 0 4px 4px;
+}
+footer a, #footer a {
+	line-height: 2.4;
+	margin: 0 10px;
+}
+
+/* TAB MENU   
+----------------------------------------------------------*/
+ul#menu {
+	line-height: 1;
+    padding: 0 0 2px;
+    position: relative;
+    margin: 0;
+}
+
+ul#menu li {
+	margin: 0;
+	padding: 0;
+    float: left;
+    list-style: none;
+    border-right: 1px solid #000;
+    border-bottom: 1px solid #000;
+}
+
+#menu a {
+	color: #fff;
+	text-decoration: none;
+	padding: 5px 15px;
+	display:block;
+}
+
+#login_indicator {
+	text-align: right;
+	margin: 0 15px;
+}
+#login_indicator a {
+	color: #fff;
+}
+/*
+ul#menu li#greeting {
+    padding: 10px 20px;
+    font-weight: bold;
+    text-decoration: none;
+    line-height: 2.8em;
+    color: #fff;
+}
+
+ul#menu li a {
+    padding: 10px 20px;
+    font-weight: bold;
+    text-decoration: none;
+    line-height: 2.8em;
+    background-color: #e8eef4;
+    color: #034af3;
+    border-radius: 4px 4px 0 0;
+    -webkit-border-radius: 4px 4px 0 0;
+    -moz-border-radius: 4px 4px 0 0;
+}
+
+ul#menu li a:hover {
+    background-color: #fff;
+    text-decoration: none;
+}
+
+ul#menu li a:active {
+    background-color: #a6e2a6;
+    text-decoration: none;
+}
+
+ul#menu li.selected a {
+    background-color: #fff;
+    color: #000;
+}
+*/
+/* FORM LAYOUT ELEMENTS   
+----------------------------------------------------------*/
+
+fieldset {
+    border: 1px solid #ddd;
+    padding: 0 1.4em 1.4em 1.4em;
+    margin: 0 0 1.5em 0;
+}
+
+legend {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+textarea {
+    min-height: 75px;
+}
+
+input[type="text"], 
+input[type="password"] {
+    border: 1px solid #ccc;
+    padding: 2px;
+    font-size: 1.2em;
+    color: #444;
+    width: 250px;
+}
+
+input.short {
+	width: 100px;
+}
+input.tiny {
+	width: 50px;
+}
+
+select {
+    border: 1px solid #ccc;
+    padding: 2px;
+    font-size: 1.2em;
+    color: #444;
+}
+
+input[type="submit"] {
+    font-size: 1.2em;
+    padding: 5px;
+}
+
+
+dl.form {
+  float: left;
+  width: 100%;
+  margin: 1em 0;
+  padding: 0;
+}
+dl.form dt {
+    clear: left;
+    float: left;
+    width: 28%;
+    margin: 0;
+    padding: 8px 5px;
+    border-top: 1px dotted #eee;
+    font-weight: bold;
+    text-align: right; 
+}
+dl.form dd {
+    float: left;
+    width: 68%;
+    margin: 0;
+    padding: 0.3%;
+    border-top: 1px dotted #eee; 
+}
+
+/* Eliminate borders on nested form lists */
+dl.form dl.form { margin: 0; }
+dl.form dl.form, dl.form dl.form dt, dl.form dl.form dd { border: none; }
+
+dl.form dd ul { list-style-type: none; }
+dl.form dd ul li { margin-left: 0; }
+
+span.form_note {
+	display:block;
+	font-style: italic;
+	color: #aaa;
+	font-weight: normal;
+}
+
+/* TABLE
+----------------------------------------------------------*/
+
+table {
+    border: solid 1px #e8eef4;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+
+table td {
+    padding: 5px;
+    border: solid 1px #e8eef4;
+}
+
+table th {
+    padding: 6px 5px;
+    text-align: left;
+    background-color: #e8eef4;
+    border: solid 1px #e8eef4;
+}
+
+/* MISC  
+----------------------------------------------------------*/
+
+/* http://sonspring.com/journal/clearing-floats */
+
+.clear {
+  clear: both;
+  display: block;
+  overflow: hidden;
+  visibility: hidden;
+  width: 0;
+  height: 0;
+}
+
+.error {
+    color: Red;
+}
+
+nav, 
+#menucontainer {
+	background: #996;
+	color: #fff;
+}
+
+#logindisplay {
+    font-size: 1.1em;
+    display: block;
+    text-align: right;
+    margin: 10px;
+    color: White;
+}
+
+#logindisplay a:link {
+    color: white;
+    text-decoration: underline;
+}
+
+#logindisplay a:visited {
+    color: white;
+    text-decoration: underline;
+}
+
+#logindisplay a:hover {
+    color: white;
+    text-decoration: none;
+}
+
+/* Styles for validation helpers
+-----------------------------------------------------------*/
+.field-validation-error {
+    color: #ff0000;
+}
+
+.field-validation-valid {
+    display: none;
+}
+
+.input-validation-error {
+    border: 1px solid #ff0000;
+    background-color: #ffeeee;
+}
+
+.validation-summary-errors {
+    font-weight: bold;
+    color: #ff0000;
+}
+
+.validation-summary-valid {
+    display: none;
+}
+
+/* Styles for editor and display helpers
+----------------------------------------------------------*/
+.display-label, 
+.editor-label {
+    margin: 1em 0 0 0;
+}
+
+.display-field, 
+.editor-field {
+    margin: 0.5em 0 0 0;
+}
+
+.text-box {
+    width: 30em;
+}
+
+.text-box.multi-line {
+    height: 6.5em;
+}
+
+.tri-state {
+    width: 6em;
+}
+
+
+/* jQuery autocomplete */
+.ui-menu .ui-menu-item a span {
+	font: italic .8em Arial, Helvetica, sans-serif;
+	color: #999;
+}
+.ui-menu .ui-menu-item a {
+	line-height: 1;
+}
+.ui-menu .ui-menu-item {
+	margin: 2px 0;
+	border-bottom: 1px solid #eee;
+}
+ul.ui-autocomplete {
+	-webkit-box-shadow: 0 2px 4px #000;
+	-moz-box-shadow: 0 2px 4px #000;
+	box-shadow: 0 2px 4px #000;
+	max-height: 300px;
+	overflow: scroll;
+}
+
+.hint {
+	font: italic 12px Arial, Helvetica, sans-serif;
+	color: #999;
+}
+
+.ui-autocomplete-loading { background: white url('../images/indicator.gif') 100% 50% no-repeat; }
+
+
+/* Flash styling */
+
+.flashInfo
+{
+    background-color: #CCFFCC;
+    border-top: 1px solid #FFCC66;
+    border-bottom: 4px solid #FFCC66;
+    padding: 6px;
+    font-family: helvetica;
+    font-size: 1.1em;
+    text-align: center;
+    border-top-color: #006600;
+    border-bottom-color: #006600;
+    font-weight: bold;
+    color: #339933;
+    cursor:pointer;
+}
+.flashWarning
+{
+    background-color: #FFFF99;
+    border-top: 1px solid #FFCC66;
+    border-bottom: 4px solid #FFCC66;
+    padding: 6px;
+    font-family: helvetica;
+    font-size: 0.9em;
+    text-align: center;
+    border-top-color: #CC9900;
+    border-bottom-color: #CC9900;
+    font-weight: bold;
+    color: #663300;
+    cursor:pointer;
+}
+.flashError
+{
+    background-color: #FFCC99;
+    border-top: 1px solid #FFCC66;
+    border-bottom: 4px solid #FFCC66;
+    padding: 4px;
+    font-family: helvetica;
+    font-size: 1.1em;
+    text-align: center;
+    border-top-color: #800000;
+    border-bottom-color: #800000;
+    font-weight: bold;
+    color: #990000;
+    cursor:pointer;
+}
+
+
+
+
+.nobreak {
+	white-space: nowrap;	
+}
+
+.icon {
+	padding-left: 20px;
+	background-position: 0 50%;
+	background-repeat: no-repeat;
+}
+a.add {
+	background-image: url(../images/plus-circle.png);
+}
+
+#property_descs li {
+	padding-left: 20px;
+}
+#property_descs input {
+	margin-left: -20px;
+}
+
+.error {
+	padding-left: 20px;
+	background: url('../images/cross.png') 0 50% no-repeat;
+	color: #b00;
+}
+ul.error {
+	list-style-type: none;
+}
+input.error {
+	background-image: none;
+	border: 1px solid #d00;
+} 
+.success {
+	padding-left: 20px;
+	background: url('../images/tick-circle.png') 0 50% no-repeat;
+	color: #0b0;
+}
+
+
+#act_as_info {
+	color: #000;
+	float: right;
+	padding: 3px;
+	margin: -5px -5px 10px 10px;
+	background: #d0ceb4;
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+}
+#act_as_selector input {
+	font-size: 10px;
+	width: 170px;
+}
+#act_as_selector img, .img_container img, .img_container input { 
+	margin: -4px 0;
+}
+p.uid {
+	background-image: url('../images/user.png');
+	margin: 0;
+}
+.actas {
+	background-image: url('../images/user-detective-gray.png');
+}
+
+table.property_listing {
+	background: #fff;
+	width: 720px;
+}
+
+
+/* ==== BEGIN tipsy css ==== */
+.tipsy { font-size: 12px; position: absolute; padding: 5px; z-index: 100000; }
+  .tipsy-inner { background-color: #000; color: #FFF; max-width: 200px; padding: 5px 8px 4px 8px; text-align: center; }
+
+  /* Rounded corners */
+  .tipsy-inner { border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px; }
+  
+  /* Uncomment for shadow */
+  /*.tipsy-inner { box-shadow: 0 0 5px #000000; -webkit-box-shadow: 0 0 5px #000000; -moz-box-shadow: 0 0 5px #000000; }*/
+  
+  .tipsy-arrow { position: absolute; width: 0; height: 0; line-height: 0; border: 5px dashed #000; }
+  
+  /* Rules to colour arrows */
+  .tipsy-arrow-n { border-bottom-color: #000; }
+  .tipsy-arrow-s { border-top-color: #000; }
+  .tipsy-arrow-e { border-left-color: #000; }
+  .tipsy-arrow-w { border-right-color: #000; }
+  
+	.tipsy-n .tipsy-arrow { top: 0px; left: 50%; margin-left: -5px; border-bottom-style: solid; border-top: none; border-left-color: transparent; border-right-color: transparent; }
+    .tipsy-nw .tipsy-arrow { top: 0; left: 10px; border-bottom-style: solid; border-top: none; border-left-color: transparent; border-right-color: transparent;}
+    .tipsy-ne .tipsy-arrow { top: 0; right: 10px; border-bottom-style: solid; border-top: none;  border-left-color: transparent; border-right-color: transparent;}
+  .tipsy-s .tipsy-arrow { bottom: 0; left: 50%; margin-left: -5px; border-top-style: solid; border-bottom: none;  border-left-color: transparent; border-right-color: transparent; }
+    .tipsy-sw .tipsy-arrow { bottom: 0; left: 10px; border-top-style: solid; border-bottom: none;  border-left-color: transparent; border-right-color: transparent; }
+    .tipsy-se .tipsy-arrow { bottom: 0; right: 10px; border-top-style: solid; border-bottom: none; border-left-color: transparent; border-right-color: transparent; }
+  .tipsy-e .tipsy-arrow { right: 0; top: 50%; margin-top: -5px; border-left-style: solid; border-right: none; border-top-color: transparent; border-bottom-color: transparent; }
+  .tipsy-w .tipsy-arrow { left: 0; top: 50%; margin-top: -5px; border-right-style: solid; border-left: none; border-top-color: transparent; border-bottom-color: transparent; }
+/* ==== END tipsy css ==== */
+
+
+strong { font-weight: bold; }
+em { font-style: italic; }
+
+ul { list-style-type: disc; }
+ul li, ol li { margin-left: 25px; }
+
+ol { list-style-type: decimal; }
+
+#tocwrapper {
+	background: #e3e3d2;
+	border: 1px solid #9b946d;
+	border-width: 1px 2px 2px 1px;
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+	width: 300px;
+	float: right;
+	margin: 5px 0 10px 15px;
+	padding: 5px 15px 5px 10px;
+}
+
+#toc_wrapper p { margin: 0; }
+
+ul#markdown-toc {
+	list-style-type: none;
+}
+
+ul#markdown-toc > li {
+	margin-left: 0;
+}
+
+ul#markdown-toc ul {
+	list-style-type: none; 
+	margin-bottom: 0;
+}
+
+ul#markdown-toc a { 
+	display: block;
+	width: 100%;
+	text-decoration: none;
+	border-bottom: 1px dotted #9b946d;
+	padding: 1px 5px;
+}
+
+ul#markdown-toc a:hover { 
+	background: #fffadd;
+}
+
+#ns_help_page img, #ns_help_page object { 
+	display: block;
+	margin: 0 auto; 
+	max-width: 600px;
+}
+
+code {
+	font-family: Consolas, "Courier New", Courier, Monospace;
+}
+pre {
+	background: #eee;
+	padding: 10px;
+	border: 1px dashed #666;
+}
+
+/* Reporting Summary styles */
+tr.ca_row td {
+	cursor: pointer;	
+}
+table { 
+	background: #fff;
+}
+
+table.annual_usage ul li {
+	list-style-type: none;
+	margin-left: 0;
+}
+
+td.warning {
+	background-image: url(../images/exclamation-diamond-frame.png);
+	background-position: 98% 3px; 
+	background-repeat: no-repeat;	
+}
+
+span.toggle {
+	display: block;
+	width: 16px;
+	height: 16px;
+	background: url(../images/toggle.png) 50% 50% no-repeat;
+}
+span.expand {
+	background-image: url(../images/toggle-expand.png);
+}
+
+/* SimpleModal styling */
+.simplemodal-overlay {
+	background: #000;
+}
+.simplemodal-data {
+	background: #fff;
+	padding: 10px;
+	border-radius: 5px;
+	box-shadow: 0 4px 4px #000;
+	width: 600px;
+}
+.error_dialog h2 {
+	border: 2px solid #db7b7b;
+	border-width: 2px 0;
+}
+.error_listing { list-style-type: none; }
+
+/* Designed to add a loading indicator to the left side of the element. */
+.ajax_loading {
+	padding-left: 20px;
+	background-image: url(../images/indicator.gif);
+	background-repeat: no-repeat;
+	background-position: 0 50%;
+}
+
+input.ajax_loading {
+	padding-left: 0;
+	padding-right: 20px;
+	background-position: 100% 50%;
+}
+
+.user_revised_vol label {
+	display: block;
+	border-top: 1px solid #8383d4;
+}
+
+/* TD styles for submitted/unsubmitted CAs */
+td.unsubmitted {
+	background: #fff9c4;
+	font-weight: bold;
+}
+td.submitted {
+	background: #cdf8c8 url(../images/tick-circle.png) 0 50% no-repeat;
+	font-weight: bold;
+	padding-left: 24px;
+}
+
+/* Overrides for reporting summary error lists */
+td.error ul { 
+	list-style-type: none;
+	margin: 0;
+}
+td.error ul li { 
+	margin-left: 0;
+}
+
+tr.well_meter_table > td {
+	background: #ddd;
+}
+
+
+#rptg_summary input, #rptg_summary select {
+	font-size: 1em;
+}
+
+td.miids_cell ul, td.miids_cell li { list-style-type: none; margin: 0; }
+ 

@@ -1,0 +1,157 @@
+﻿@{
+    ViewBag.Title = "ManageUsageReports";
+}
+
+<h2>Manage Usage Reports</h2>
+
+<p>To view usage reports, start typing a user's name:</p>
+
+<input type='text' id='search_term' />
+
+<div id='usage_report_listing'>
+
+</div>
+
+
+<script type="text/javascript">
+	var ManageUsageReports = (function () {
+
+		return {
+			searchIval: -1,
+			currentXhr: null,
+			/// Searches for users and lists the available reports.
+			search: function (searchTerm, txtbox) {
+				// Cancel any pending requests
+				(this.currentXhr || { abort: function () { } }).abort();
+				$(txtbox).addClass('ajax_loading');
+				$.ajax(
+					"@Url.Action("FindUsageReportsByNameOrEmail", "Admin")",
+					{
+						type: "POST",
+						dataType: "json",
+						data: {
+							searchTerm: searchTerm
+						},
+						success: function(data, textStatus, jqXHR) {
+							var div = $('#usage_report_listing').empty();
+
+							if (data.length == 0) {
+								div.append('<p class="error">No matching users found. (Note that to show up here, the users must have contiguous acres associated with their account.)</p>');
+							} else {
+								for (var i = 0; i < data.length; i++) {
+									div.append(
+										$('<h2></h2>').text(data[i].name + (data[i].email.length > 0 ? ' (' + data[i].email + ')' : ''))
+									).append(
+										// Reporting access override
+										$('<label></label>').text('Allow reporting outside date limits?').prepend(
+											$('<input type="checkbox" ' + (data[i].reportingOverride === true ? 'checked="checked"' : '') + ' />')
+										)
+									).append(
+										$('<div style="width:30px;height:30px;display:none;" class="ajax_loading" id="loader_' + data[i].userId + '"></div>')
+									).find('input').click((function(userId) {
+										return function() {
+											// Send ajax request to store override value
+											$('.astatus').remove();
+											var loader = $('#loader_' + userId).show();
+											$.ajax(
+												"@Url.Action("SetReportingOverride", "Admin")",
+												{
+													type: 'POST',
+													dataType: 'json',
+													data: {
+														userId: userId,
+														canReport: $(this).is(':checked')
+													},
+													success: function(data, textStatus, jqXHR) {
+														if (data.success){ 
+															loader.after($('<div class="astatus success">Saved.</div>'));
+														} else {
+															loader.after($('<div class="astatus error">Error: ' + data.error + '</div>'));
+														}
+													},
+													complete: function(jqXHR, textStatus) {
+														loader.hide();
+													}
+												}
+											);
+										}
+									})(data[i].userId));
+
+									if (data[i].years.length == 0) {
+										div.append($('<p><em>No submitted usage reports found</em></p>'));
+									} else {
+										for (var year in data[i].years) {
+											var table = $('<table><thead><tr><th>Contiguous Acres</th><th>Submittal Status</th></tr></thead></table>');
+											var tbody = $('<tbody></tbody>');
+											for (var j = 0; j < data[i].years[year].length; j++) {
+												var ca = data[i].years[year][j];
+												tbody.append($('<tr></tr>').append(
+														$('<td></td>').text(ca.number + ': ' + ca.description)
+													).append(
+														$('<td></td>').append(
+															ca.isSubmitted 
+																? $('<a href="#">Submitted (click to unsubmit)</a>').click(function() {
+																		var anchor = $(this);
+																		if (confirm('Are you sure you want to unsubmit this CA? This will delete the user\'s previous submittals and allow him to resubmit.')) {
+																			$.ajax(
+																				"@Url.Action("UnsubmitCA", "Admin")",
+																				{
+																					type: "POST",
+																					dataType: "json",
+																					data: {
+																						year: year,
+																						caId: ca.number
+																					},
+																					success: function(data, textStatus, jqXHR) {
+																						var td = anchor.closest('td');
+																						td.empty().addClass('success').text('Unsubmitted.');
+																					},
+																					error: function(jqXHR, textStatus, errorThrown) {
+																						anchor.closest('td').append($('<p class="error">An error occurred: ' + errorThrown + '</p>'))
+																					}
+																				}
+																			);
+																		}
+																		return false;
+																	})
+																: 'Unsubmitted'
+														)
+													)
+												);
+											}
+											table.append(tbody);
+											div.append(
+												$('<h3></h3>').text(year == 0 ? "Currently Unsubmitted Contiguous Acres" : year)
+											).append(
+												table
+											);
+										}
+									}
+										
+
+								}
+							}
+						},
+						error: function(jqXHR, textStatus, errorThrown) {
+
+						},
+						complete: function(jqXHR, textStatus) {
+							txtbox.removeClass('ajax_loading');
+						}
+					}
+				);
+			}
+		};
+	})();
+
+	$(document).ready(function() {
+		$('#search_term').keyup(function() {
+			clearTimeout(ManageUsageReports.searchIval);
+			var searchTerm = $(this).val();
+			var txt = $(this);
+			ManageUsageReports.searchIval = setTimeout(function() { ManageUsageReports.search(searchTerm, txt); }, 500);
+		});
+
+	});
+
+</script>

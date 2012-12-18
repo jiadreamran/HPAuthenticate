@@ -1,0 +1,92 @@
+﻿@using HPAuthenticate.Helpers
+
+@using (@Html.BeginForm("ActAs", "User")) {
+
+	<div id='act_as_info'>
+		<p class='icon uid'>Logged in as @ViewBag.CurrentUsername.</p>
+		@if (ViewBag.IsAdmin) {
+			<div class='icon actas'>
+				@if (ViewBag.Acting) {
+					<text>
+						<span id='act_as_descriptor' class='img_container'>
+							Acting as <a href='#' id='act_as_link'>@ViewBag.ActingUser.DisplayName <img src='@Url.Image("xfn-friend.png")' alt='' title='Change user' /></a>
+							<input type='image' src='@Url.Image("prohibition-button.png")' value='1' name='cancel_act_as' alt='Revert' title='Revert to your own account (stop acting)' />
+						</span>
+					</text>
+				} else {
+					<text>
+						<span id='act_as_descriptor'><a href='#' id='act_as_link'>Act as...</a></span>
+					</text>
+				}
+
+				<div id='act_as_selector' style="display:none;">
+						@Html.Hidden("return_uri", Request.Url.ToString())
+						@Html.TextBox("act_as_name")
+						@Html.Hidden("act_as_user_id")
+						<a href='#' id='cancel_act_as'><img src='@Url.Image("cross.png")' alt="Cancel" /></a>
+				</div>
+			</div>
+		}
+	</div>
+}
+
+<script type='text/javascript'>
+
+	$(document).ready(function () {
+		$('#act_as_link').live('click', function() {
+			$('#act_as_descriptor').hide();
+			$('#act_as_selector').show().find('#act_as_name').val('').focus();
+			return false;
+		});
+
+		function showDescriptor() {
+			$('#act_as_selector').hide();
+			$('#act_as_descriptor').show();
+		}
+
+		$('#cancel_act_as').click(showDescriptor);
+		$('#act_as_name').blur(showDescriptor);
+
+		$('#act_as_name').autocomplete({
+			source: function (request, response) {
+				$.ajax(
+					"@Url.Action("FindAllClients", "User")",
+					{
+						type: "POST",
+						data: {
+							term: request.term
+						},
+						success: function(data, textStatus, jqXHR) {
+							if (data.length == 0) {
+								data.push({DisplayName:'No matching users found',DisplayAddress:[''],selectable:false});
+							}
+							response(data);
+						},
+						error: function(jqXHR, textStatus, errorThrown) {
+							if (console && console.debug) {
+								console.debug(jqXHR, textStatus, errorThrown);
+							}
+							$('#act_as_name_status').text(errorThrown);
+						}
+					}
+				)
+			},
+			select: function(event, ui) {
+				if (ui.item.selectable === false) {
+					return false;
+				}
+
+				$('#act_as_user_id').val(ui.item.UserId);
+				$('#act_as_name').val(ui.item.DisplayName).parents('form').submit();
+				
+			}
+		}).data("autocomplete")._renderItem = function(ul, item) {
+			return $("<li></li>")
+				.data("item.autocomplete", item)
+				.append("<a>" + item.DisplayName + "<br><span>" + item.DisplayAddress + "<br />" + item.Email + "</span></a>")
+				.appendTo(ul);
+		};
+	});
+
+</script>
+

@@ -1,0 +1,26 @@
+﻿	<dl class="form">
+		<dt>@Html.Label("Email")</dt>
+		<dd>@Html.TextBox("email")</dd>
+
+		<dt>@Html.Label("Password")</dt>
+		<dd>@Html.Password("password")</dd>
+
+		<dt></dt>
+		<dd>
+			<label>@Html.CheckBox("remember_me", true) Remember me</label>
+		</dd>
+
+		<dt></dt>
+		<dd><input type="submit" value="Login"></input></dd>
+
+		<dt></dt>
+		<dd>
+			@Html.ActionLink("Forgot password?", "ResetPassword", "Session")
+		</dd>
+	</dl>
+
+
+
+	<div class="clear"></div>
+
+	

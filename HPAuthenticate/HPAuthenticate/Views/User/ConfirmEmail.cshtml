@@ -1,0 +1,32 @@
+﻿@{
+    ViewBag.Title = "Confirm Email";
+}
+
+@if (ViewBag.Confirmed) {
+
+	<h2>Email address confirmed</h2>
+	
+	<p>Thank you! You can now @Html.ActionLink("proceed to your account", "Details", "User").</p>
+	
+} else {
+
+	<h2>Confirm Email Address</h2>
+	
+	<p>Please enter your confirmation code below and click "Confirm".</p>
+	
+	using (Html.BeginForm()) {
+		@Html.TextBox("code")
+
+		<input type='submit' value='Confirm' />
+	
+		<h2>Didn't receive a code?</h2>
+		<p>
+			First, try checking your "spam" folder in case the confirmation message was filtered into there. 
+			If you still can't find it, enter your address below and click "Resend" to send the code again.
+		</p>
+	
+		@Html.TextBox("email_address")
+		<input type='submit' value='Resend' />
+	}
+	
+}

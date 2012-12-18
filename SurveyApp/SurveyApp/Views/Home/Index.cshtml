@@ -1,0 +1,81 @@
+﻿@model SurveyApp.Models.SurveyResponse
+
+@{
+    ViewBag.Title = "Survey";
+}
+
+@if (!ViewBag.Completed) {
+
+	<h2>Irrigation Duration Survey</h2>
+	<p>If you are a grower in an area with approximately 50 feet of saturated thickness or less, and have records of the number of irrigation days per season (the number of hours recorded on a center pivot per year divided by 24), for the last 1-3 years, your information will be valuable to this study.  If you are willing to participate, please complete the short survey below.  Note that your personal information will <strong>not</strong> be published as part of the reporting associated with this study. In order to complete our study so that results may be considered at the upcoming December Agriculture Stakeholder Advisory Group meeting, please submit your information by October 15.</p>
+	
+	<p><span class='form_note'>Fields marked with an asterisk (*) are required.</span></p>
+	using (Html.BeginForm()) {
+		<dl class="form">
+			<dt>
+				@Html.LabelFor(m => m.FirstName, "* First Name:")
+			</dt>
+			<dd>
+				@Html.TextBoxFor(m => m.FirstName)<br />
+				@Html.ValidationMessageFor(m => m.FirstName)
+			</dd>
+			<dt>
+				@Html.LabelFor(m => m.LastName, "* Last Name:")
+			</dt>
+			<dd>
+				@Html.TextBoxFor(m => m.LastName)<br />
+				@Html.ValidationMessageFor(m => m.LastName)
+			</dd>
+
+			<dt>
+				@Html.LabelFor(m => m.County, "County:")
+			</dt>
+			<dd>
+				@Html.DropDownListFor(m => m.County, SurveyApp.Models.SurveyResponse.AvailableCounties, "-- Select one --")<br />
+				@Html.ValidationMessageFor(m => m.County)
+			</dd>
+
+			<dt>
+				@Html.LabelFor(m => m.EstimatedThickness, "Estimated Saturated Thickness (if known):")
+			</dt>
+			<dd>
+				@Html.TextBoxFor(m => m.EstimatedThickness)
+			</dd>
+
+			<dt>
+				@Html.LabelFor(m => m.CropType, "Typical Crop Type (e.g. corn, cotton):")
+			</dt>
+			<dd>
+				@Html.TextBoxFor(m => m.CropType)
+			</dd>
+
+			<dt>
+				@Html.LabelFor(m => m.AvgIrrigationDays, "* Average Number of Days of Irrigation Per Season:")
+			</dt>
+			<dd>
+				@Html.TextBoxFor(m => m.AvgIrrigationDays)<br />
+				@Html.ValidationMessageFor(m => m.AvgIrrigationDays)
+			</dd>
+
+			<dt>
+				@Html.LabelFor(m => m.NumberYears, "Number of Years Used in Calculating Average:")
+			</dt>
+			<dd>
+				@Html.TextBoxFor(m => m.NumberYears)
+			</dd>
+
+			<dt></dt>
+			<dd><input type="submit" value="Submit response" />
+			</dd>
+
+
+		</dl>
+	}
+	
+} else {
+	
+	<h2>Survey Response Submitted</h2>
+	
+	<p class="success">Your response has been submitted. Thanks!</p>
+	
+}

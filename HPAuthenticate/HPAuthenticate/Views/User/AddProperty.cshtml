@@ -1,0 +1,486 @@
+﻿@using HPAuthenticate.Helpers
+@model HPAuthenticate.ViewModels.NewPropertyViewModel
+
+@{
+    ViewBag.Title = "Add Property";
+}
+
+@section footer_scripts {
+	<script src="@Url.Script("jquery.validate.js")"></script>
+	<script src="@Url.Script("jquery.validate.unobtrusive.js")"></script>
+
+}
+
+<h2>Add Property</h2>
+
+<p>All fields are required unless greyed out (disabled).</p>
+
+@using (Html.BeginForm(ViewContext.Controller.ValueProvider.GetValue("action").RawValue.ToString(), ViewContext.Controller.ValueProvider.GetValue("controller").RawValue.ToString(), FormMethod.Post, new { autocomplete = "off" })) {
+	@Html.ValidationSummary(true, "Unable to add property; please correct the errors and try again.")
+
+	<dl class='form'>
+		<dt></dt>
+		<dd>
+			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.owner, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.owner, new { id = "radOwner" }) Owner (only)</label><br>
+			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.installer, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.installer, new { id = "radInstaller" }) Water Meter Installer (only)</label><br />
+			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.authorized_producer, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.authorized_producer, new { id = "radTenant" }) Operator (a legally authorized representative of the "owner" such as a tenant or farm manager)</label>
+		</dd>
+	</dl>
+
+	<div id='agent_form'>
+	<dl class="form">
+		<dt>
+			@Html.LabelFor(m => m.OwnerName)*
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.OwnerName, new { data_allowed_roles = "owner,installer,tenant" })
+			<span id='owner_name_status'></span>
+			<span id='owner_name_hint' class='hint'>Start typing a last name to view owners.</span>
+			@Html.ValidationMessageFor(m => m.OwnerName)
+		</dd>
+
+		<dt>
+			<label for='property_descs'>Property Descriptions*</label>
+			<span class='hint'>(add/select at least one)</span>
+		</dt>
+		<dd>
+			@Html.ValidationMessageFor(m => m.Properties)
+			@Html.Hidden("available_properties", Request["available_properties"], new { id = "available_properties" })
+			<ul id='property_descs'>
+				<li id='owner_selector_hint'><span class='hint'>Select an owner above to view properties. If you are unable to find an owner name you know to be on file with the county appraisal district, 
+			please try <a href="../../hpuwcd/index.html?config=config-menu-ap.xml">adding a property using the map</a>. You can also @Html.ActionLink("contact HPWD", "Help", "Home") by email to resolve the issue.</span></li>
+			</ul>
+			@* 20111101: For now, nobody can add new properties that are not already in AppraisalRolls.
+			<label>
+				Add new: <input type='text' id='new_prop_desc' data-allowed-roles="owner,tenant"></input>
+			</label>
+			<a id='add_new_prop_desc' class='icon add' href='#'>Add</a>
+			*@
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.OwnerMailingAddress)*
+		</dt>
+		<dd>
+			@Html.Hidden("OwnerMailingAddress_orig", Request["OwnerMailingAddress_orig"])
+			@Html.TextBoxFor(m => m.OwnerMailingAddress, new { data_allowed_roles = "owner", data_owner_attribute = "true" })
+			@Html.ValidationMessageFor(m => m.OwnerMailingAddress)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.OwnerCity)*
+		</dt>
+		<dd>
+			@Html.Hidden("OwnerCity_orig", Request["OwnerCity_orig"])
+			@Html.TextBoxFor(m => m.OwnerCity, new { data_allowed_roles = "owner", data_owner_attribute = "true" })
+			@Html.ValidationMessageFor(m => m.OwnerCity)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.OwnerState)*
+		</dt>
+		<dd>
+			@Html.Hidden("OwnerState_orig", Request["OwnerState_orig"])
+			@Html.DropDownListFor(m => m.OwnerState, HPAuthenticate.ViewModels.UserViewModel.AvailableStates, new { data_allowed_roles = "owner", data_owner_attribute = "true" })
+			@Html.ValidationMessageFor(m => m.OwnerState)
+		</dd>
+
+				<dt>
+			@Html.LabelFor(m => m.OwnerZip)*
+		</dt>
+		<dd>
+			@Html.Hidden("OwnerZip_orig", Request["OwnerZip_orig"])
+			@Html.TextBoxFor(m => m.OwnerZip, new { data_allowed_roles = "owner", data_owner_attribute = "true" })
+			@Html.ValidationMessageFor(m => m.OwnerZip)
+		</dd>
+
+
+		<dt>
+			@Html.LabelFor(m => m.OwnerPhone, "Owner Phone Number")*<br />
+			<span class='hint'>E.g. (806) 762-0181 x123</span><br />
+		</dt>
+		<dd>
+			@Html.Hidden("OwnerPhone_orig", Request["OwnerPhone_orig"])
+			@Html.TextBoxFor(m => m.OwnerPhone, new { data_allowed_roles = "owner", data_owner_attribute = "true" })
+			@Html.ValidationMessage("OwnerPhone")
+		</dd>
+	</dl>
+
+	<dl class='form' id='dataWrong' data-allowed-roles="tenant,installer">
+		<dt></dt>
+		<dd>
+			<label>
+				@Html.CheckBoxFor(m => m.IsDataWrong) The above contact information is not correct<br />
+				<span class='hint'>If you see data errors in the owner contact information above, please check this box to let us know we need to review and correct it.</span>
+			</label>
+		</dd>
+	</dl>
+
+
+		<dl class='form' data-disclaimer-role="installer">
+			<dt></dt>
+			<dd>
+				I, @Model.CurrentUserDisplayName, do hereby
+				certify and promise that the meter installed has been accurately reported
+				as to meter location, meter type and vendor, meter serial number, and
+				other related information requested.  Further, I certify that the "owner"
+				or if applicable the "operator" of the property described herein has
+				formally and specifically authorized this installation on the property
+				described.  THIS IS A METER INSTALLATION ONLY and does not authorize
+				further and ongoing actions on behalf of the "owner" or "operator" such
+				as production reporting.  Such production reporting after the installation
+				is the sole responsibility of the "owner" or "operator" or an appropriate
+				designated party specifically authorized to report water production and
+				use.
+			</dd>
+		</dl>
+
+		<dl class='form' data-disclaimer-role="tenant,owner" data-allowed-roles="tenant,owner">
+			<dt></dt>
+			<dd>
+				@Html.ValidationMessageFor(m => m.ProductionTypes) <br/ >
+				I, @Model.CurrentUserDisplayName, am legally authorized to produce and accurately report
+				groundwater use to  High Plains Underground Water Conservation District for
+				the following use:
+				<strong>
+					<label class='nobreak'>@Html.CheckBoxFor(m => m.ProductionTypeAgriculture)&nbsp;agriculture</label> / 
+					<label class='nobreak'>@Html.CheckBoxFor(m => m.ProductionTypeMineralProduction)&nbsp;mineral&nbsp;production</label> /
+					<label class='nobreak'>@Html.CheckBoxFor(m => m.ProductionTypeIndustrial)&nbsp;industrial/commercial</label>
+				</strong>
+				By entering this information and pushing the "Create Account" button, I am warranting and
+				certifying that I have formally and specifically been designated the legally  
+				authorized representative to produce and report this consumption/use to the
+				High Plains Underground Water Conservation District.
+			</dd>	
+
+		</dl>
+
+
+		@* In this case the authorized producer name is always the same, so on load set it. *@
+		<script type='text/javascript'>
+			// Checks the selected property role and shows/hides/disables form elements appropriately
+			function updateForm() {
+				// Map the selected role to a known string for the purposes of enabling/disabling form elements.
+				var roles = {};
+				roles[parseInt($('#radOwner').val())] = "owner";
+				roles[parseInt($('#radInstaller').val())] = "installer";
+				roles[parseInt($('#radTenant').val())] = "tenant";
+
+				var selectedRole = roles[parseInt($('input[name="PropertyRole"]:checked').val())];
+
+				// Disable all controls except those having the currently-selected role
+				$('input[data-allowed-roles], select[data-allowed-roles]').each(function(i, el) {
+					el = $(el);
+					if ($.inArray(selectedRole, el.data('allowed-roles').split(',')) > -1) {
+						el.removeAttr('disabled');
+					} else {
+						el.attr('disabled', 'disabled');
+					}
+				});
+
+				$('*[data-visible-roles]').each(function(i, el) {
+					el = $(el);
+					if ($.inArray(selectedRole, el.data('visible-roles').split(',')) > -1) {
+						el.show();
+					} else {
+						el.hide();
+					}
+				});
+
+				// Hide disclaimers as necessary.
+				$('dl[data-disclaimer-role]').each(function(i, el) {
+					el = $(el);
+					if ($.inArray(selectedRole, el.data('disclaimer-role').split(',')) > -1) {
+						el.show().removeAttr('disabled');
+					} else {
+						el.hide().attr('disabled', 'disabled');
+					}
+				});
+
+				// If the selected role is 'owner' AND the 'dataWrong' checkbox is checked,
+				// then enable the owner data fields for editing.
+				var isDataWrong = $('#dataWrong :checkbox').is(':checked');
+				var ownerFields = $(':input[data-owner-attribute=true]');
+				if (isDataWrong && selectedRole == "owner") {
+					ownerFields.removeAttr('disabled');
+				} else {
+					// Disable owner info fields and also reset back to
+					// their original values (in case user changed any).
+					ownerFields.attr('disabled', 'disabled');
+					$('#OwnerMailingAddress').val($('#OwnerMailingAddress_orig').val());
+					$('#OwnerCity').val($('#OwnerCity_orig').val());
+					$('#OwnerState').val($('#OwnerState_orig').val());
+					$('#OwnerZip').val($('#OwnerZip_orig').val());
+					$('#OwnerPhoneNumber').val($('#OwnerPhoneNumber_orig').val());
+				}
+			};
+
+			/// Saves the current condition of the selected properties to a hidden field
+			/// so that they can be persisted across an invalid form post.
+			function savePropertyState() {
+				var values = [];
+				$('#property_descs li input').not('#selectAllProperties').each(function(i, el) {
+					el = $(el);
+					values.push(el.val() + "\1" + (el.is(':checked') ? 1 : 0));
+				});
+				$('#available_properties').val(values.join("\2"));
+			};
+
+			function updateSelectAllStatus() {
+				var allChecked = true;
+				$('#property_descs :checkbox').not('#selectAllProperties').each(function() { allChecked = allChecked & $(this).is(':checked'); });
+				if (allChecked) {
+					$('#selectAllProperties').attr('checked', 'checked');
+				} else {
+					$('#selectAllProperties').removeAttr('checked');
+				}
+
+			}
+
+			function addPropertyDescription(propDesc, checked, userAdded, isChecked) {
+				var currentOwnerName = $('#OwnerName').val();
+				var pdescs = $('#property_descs');
+				// If the property is one added by the user, append it to the end of the list.
+				// If it's one we got from the database, prepend it to the beginning of the list.
+				// The value of each checkbox shall be according to the format:
+				//
+				//		customId|parcelId|county|description
+				//
+				// Any blank fields will be left as blank, so a custom-added property will look like:
+				//
+				//		99||
+				//
+				// This is designed to be split on pipe.					
+				var chk = $('<input type="checkbox"></input>')
+							.attr('name', 'property_descs')
+							.val(escape(propDesc.CustomId || '') + "|" + escape(propDesc.ParcelId || '') + "|" + escape(propDesc.County || '') + "|" + escape(propDesc.Description || ''))
+							.attr('data-user-added', userAdded || false)
+							.click(function() {
+								savePropertyState();
+								updateSelectAllStatus();
+							});
+				if (isChecked) {
+					chk.attr('checked', 'checked');
+				}
+				var lbl = $('<label></label>').text(propDesc.Description || (propDesc.ParcelId + '/' + propDesc.County)).prepend(chk);
+				if (propDesc.OwnerName && propDesc.OwnerName != currentOwnerName) {
+					lbl.append('<br />').append('<span class="hint">' + propDesc.OwnerName + '</span>');
+				}
+
+				// Formerly users could add properties; we don't do that anymore so always append.
+				// (userAdded ? pdescs.append : pdescs.prepend).call(pdescs,
+				pdescs.append($('<li></li>').append(lbl));
+
+				return isChecked;
+			};
+
+			$(document).ready(function () {
+				$('#dataWrong :checkbox').click(updateForm);
+
+				$('#selectAllProperties').live('click', function() {
+					if ($(this).is(':checked')) {
+						// Check all the property checkboxes.
+						$('#property_descs :checkbox').attr('checked', 'checked');
+					} else {
+						// Uncheck all the property checkboxes.
+						$('#property_descs :checkbox').removeAttr('checked');
+					}
+				});
+
+				function getSelectAllPropertiesCheckbox(checked) {
+					var chk = $('<input type="checkbox"></input>').attr('id', 'selectAllProperties');
+					if (checked) {
+						chk.attr('checked', 'checked');
+					}
+					return $('<li></li>').append($('<label></label>').append($('<strong></strong>').text('Select or Deselect all properties')).prepend(chk));
+				};
+
+				// Set up autocompletion on owner name, property description
+				$('#OwnerName').autocomplete({
+					source: function(request, response) {
+						$.ajax(
+							"@Url.Action("FindOwners", "User")",
+							{
+								type: "POST",
+								data: {
+									term: request.term
+								},
+								success: function(data, textStatus, jqXHR) {
+									if (data.length == 0) {
+										data.push({Name:'No matching owners found',FullAddress:[''],selectable:false});
+									}
+									response(data);
+								},
+								error: function(jqXHR, textStatus, errorThrown) {
+									if (console && console.debug) {
+										console.debug(jqXHR, textStatus, errorThrown);
+									}
+									$('#owner_name_status').text(errorThrown);
+								},
+								complete: function(jqXHR, textStatus) {
+							
+								}
+							}
+						);
+					},
+				
+					search: function(event, ui) {
+						// Hide starting hint.
+						$('#owner_name_hint').hide();
+						$('#OwnerName').animate({width:'100%'});
+					},
+					select: function(event, ui) {
+						if (ui.item.selectable === false) {
+							// Prevent select; this is a display property only.
+							return false;
+						}
+						// Also update the property description field with this
+						// property description, though the user may override that.
+						// Do not replace the description if the user already entered something.
+						/*
+						var pdesc = $('#PropertyDescription');
+						if (!$.trim(pdesc.val())) {
+							pdesc.val(ui.item.PropertyDescriptions[0].LegalDescription);
+						}
+	
+						$('#PropertyDescription').autocomplete({
+							source: ui.item.PropertyDescriptions
+						});
+						*/
+
+						// Populate property description checkboxlist
+
+						// We need to do another ajax lookup to find properties by owner's mailing address.
+						$.ajax(
+							"@Url.Action("FindProperties", "User")",
+							{
+								data:{
+									ownerName:ui.item.Name,
+									address:ui.item.MailingAddress,
+									city:ui.item.City,
+									state:ui.item.State,
+									zip:ui.item.PostalCode
+								},
+								success: function(data, textStatus, jqXHR) {
+									$('#property_descs li').not('#owner_selector_hint').remove();
+									$('#owner_selector_hint').hide();
+									if (!data || data.length == 0) {
+										$('#property_descs').append(
+											'<li id="no_properties_found_hint"><p class="hint">No properties found! The information on this page is derived directly from county appraisal roll records. If you are having trouble locating your information, contact the District at <a href="mailto:gsanders@hpwd.com">gsanders@hpwd.com</a>.</p><p class="hint">You could also try <a href="@Url.Content("/hpuwcd/index.html?config=config-menu-ap.xml")">adding the property using a map</a>.</p></li>'
+										);
+									} else {
+										var allChecked = true;
+										for (var i = 0; i < data.length; i++) {
+											allChecked = allChecked & addPropertyDescription(data[i], true, false, true);
+										}
+
+										$('#property_descs').prepend(
+											getSelectAllPropertiesCheckbox(allChecked)
+										);
+									}
+									savePropertyState();
+								}
+							}
+						);
+
+						/*
+						// Clear all non-user-added property descriptions already in the list
+						$('#property_descs li input[data-user-added=false]').parents('li').remove();
+						for (var i = 0; i < ui.item.PropertyDescriptions.length; i++) {
+							addPropertyDescription(ui.item.PropertyDescriptions[i], true, false);
+						}
+						*/
+
+						// Autofill address fields
+						$('#OwnerMailingAddress, #OwnerMailingAddress_orig').val(ui.item.MailingAddress);
+						$('#OwnerCity, #OwnerCity_orig').val(ui.item.City);
+						$('#OwnerState, #OwnerState_orig').val(ui.item.State);
+						$('#OwnerZip, #OwnerZip_orig').val(ui.item.PostalCode);
+						$('#OwnerPhoneNumber, #OwnerPhoneNumber_orig').val(ui.item.Phone);
+						/*
+						$('#OwnerBusinessPhone').val(ui.item.PhoneBusiness);
+						$('#OwnerHomePhone').val(ui.item.PhoneHome);
+						$('#OwnerMobilePhone').val(ui.item.PhoneMobile);
+						*/
+						$(this).val(ui.item.Name);
+						return false;
+					}
+				}).data("autocomplete")._renderItem = function(ul, item) {
+					return $("<li></li>")
+							.data("item.autocomplete", item)
+							.append("<a>" + item.Name + "<br><span>" + item.FullAddress + "</span></a>")
+							.appendTo(ul);
+				};
+
+				$('#OwnerName').keyup(function() {
+					if ($.trim($(this).val()) === '') {
+						// Restore the owner selector hint, clear any properties and owner data
+						$('#no_properties_found_hint').remove();
+						$('#property_descs li').not('#owner_selector_hint').remove();
+						$('#owner_selector_hint').show();
+						$('[id^="Owner"]').val('');
+					}
+				});
+
+				$('input[name="PropertyRole"]').click(updateForm);
+
+				// Populate previously-selected properties.
+				var pstr = unescape($('#available_properties').val());
+				if (pstr.length > 0) {
+					var props = pstr.split("\2");
+					var pdescs = $('#property_descs');
+					if (props.length > 0) {
+						pdescs.empty();
+					}
+					var allChecked = true;
+					for (var i = 0; i < props.length; i++) {
+						var x = props[i].split("\1");
+						var ar = x[0].split('|');
+						// Mimic the data objects coming back from an ajax call for properties.
+						var p = {
+							CustomId: ar[0],
+							ParcelId: ar[1],
+							County: ar[2],
+							Description: ar[3],
+							OwnerName: null,
+							IsNew: false
+						};
+						allChecked = allChecked & addPropertyDescription(p, true, false, x[1] == 1)
+					}
+					$('#property_descs').prepend(getSelectAllPropertiesCheckbox(allChecked));
+				}
+
+				updateForm();
+
+
+			@* 20111101: For now, nobody can add new properties that are not already in AppraisalRolls.
+
+				// Set up link to add new property descriptions
+				$('#add_new_prop_desc').click(function() {
+					var txtbox = $('#new_prop_desc');
+					if (txtbox.length == 0 || !$.trim(txtbox.val())) {
+						alert('Please enter a property description to add.');
+						txtbox.focus();
+						return false;
+					}
+
+					addPropertyDescription({"Description":txtbox.val()}, true, true);
+					txtbox.val('');
+
+					return false;
+				});
+			*@
+
+			}); // document ready
+		</script>
+	</div>
+
+	<dl class='form'>
+		<dt></dt>
+		<dd>
+			<input type='submit' value='Add property'></input>
+		</dd>
+	</dl>
+
+	<div class='clear'></div>
+}

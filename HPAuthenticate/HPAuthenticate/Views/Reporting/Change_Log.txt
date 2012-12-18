@@ -1,0 +1,54 @@
+﻿Nov 27, 2012
+
+Index.cshtml:
+
+Line 115: if the ending reading is not valid (the IsReadingValid function is from line 514 to line 520 in ReportingDalc.cs),
+use EndReading as the input for volume calculation. However, the BeginReading should always be valid.
+Line 297: add logic ("_validateTimePeriod") to validate today's date to decide whether the "Submit" button should be disabled.
+Line 320: add logic "_isSubmitDisabled" to decide whether the submit button should be disabled at the first place. This function will replace "_validateTimePeriod".
+Line 812: add property "disabled" to control whether today is a valid day to submit the report. (.prop('disabled', _isSubmitDisabled()))
+Line 824: incorporate the "isFakingValidReadings" into the CA object as a parameter (contigAcres.isFakingValidReadings = _isFakingValidReadings;)
+Line 124, 134: logic to "_isFakingValidReadings"
+Line 323: where "_isFakingValidReadings" is defined
+Line 210-212: multiplier: do not allow value "0"
+New function "_cleanCAIndicationVariables()", used everytime user expands a CA node
+
+AlternateIndex.chhtml:
+Line 115: same as line 115 in Index.cshtml
+Line 294: same as line 297 in Index.cshtml
+Line 318: same as 320 in Index.cshtml
+Line 1291: same as line 812 in Index.cshtml
+Line 1332: same as line 824 in Index.cshtml
+Line 124, 134: same as line 124 in Index.cshtml
+Line 320: same as line 323 in Index.cshtml
+Line 1340
+Line 203-205: same as line 210-212 in Index.cshtml
+Line 1339, 324, 791: allow user-revised volume to by pass the valid reading check
+
+MeterDalc.cs:
+Line 69, 93: enable Rollover
+Line 150: change time frame from "01/01/currentYear - 12/31/currentYear" to "11/15/currentYear-1 - 01/15/currentYear+1"
+Reporting page specific: same as above (line 175 and the Func)
+GetUnitOfMeasurementDefinitions, this function will now only return top 3 rows in production
+***********************************************
+OK so in fact the unit of measurements are pull up from two places: 
+1) If there is a report summary in the reportingSummaries table
+***********************************************
+
+ReportingDalc.cs:
+Line 63: change day from Mar 15 to Mar 1
+GetUsageReportsByUserNameOrEmail: add logic to filter out the deleted CAs.
+
+ReportingController.cs:
+Line 445-450: add check for faking valid readings, also if the reading is user-revised, allow the submittal of report summary.
+
+JsonContiguousAcres.cs:
+Line 30: add an attribute "isFakingValidReadings", this will indicate whether the reporting summary is using a invalid reading to do the volumn calculation.
+		 If this value is true, then you cannot submit the report.
+Line 31: if the user does not accept the calculated volume, this variable (if true) indiates that he is using his own calculation. When submitting the report, if this value is true, it will not check whether the readings are valid.
+
+HP_SQL_TEST database (Prod):
+In "ReportedMeterVolumes" table, add "SubmitDatetime" (type: Date) as a column.
+
+HP_SQL database (Dev):
+In "ReportedMeterVolumes" table, add "SubmitDatetime" (type: Date) as a column.

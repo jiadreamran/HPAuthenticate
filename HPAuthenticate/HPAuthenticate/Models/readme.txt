@@ -1,0 +1,1 @@
+﻿Models are in the HPEntities class project as Entities, supported by Dalcs (Data access logic components) for database access.

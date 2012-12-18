@@ -1,0 +1,243 @@
+﻿@model HPAuthenticate.ViewModels.UserViewModel
+@using HPAuthenticate.ViewModels
+@using HPAuthenticate.Helpers
+
+
+@{
+    ViewBag.Title = "Create Account";
+}
+
+@section footer_scripts {
+	<script src="@Url.Script("jquery.validate.js")"></script>
+	<script src="@Url.Script("jquery.validate.unobtrusive.js")"></script>
+}
+
+
+<h2>Create Account</h2>
+
+<p>Fields marked with an asterisk (*) are required.</p>
+
+@using (Html.BeginForm()) {
+	@Html.ValidationSummary(false, "Unable to create account; please correct the errors and try again.")
+	<dl class="form">
+		<dt>
+			@Html.LabelFor(m => m.User.Email)@if (!(Model is AdminCreateUserViewModel)) {<text>*</text>}
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.Email)
+			<br /><span id='email_availability_status'></span><br />
+			@Html.ValidationMessageFor(m => m.User.Email)
+		</dd>
+
+		@if (!(Model is AdminCreateUserViewModel)) {
+			<text>
+				<dt>
+					@Html.LabelFor(m => m.Password)*
+				</dt>
+				<dd>
+					@Html.PasswordFor(m => m.Password)
+					<span class='hint'>Must be at least 6 characters.</span><br />
+					@Html.ValidationMessageFor(m => m.Password)
+				</dd>
+				<dt>
+					@Html.LabelFor(m => m.PasswordConfirmation)*
+				</dt>
+				<dd>
+					@Html.PasswordFor(m => m.PasswordConfirmation)<br />
+					@Html.ValidationMessageFor(m => m.PasswordConfirmation)
+				</dd>
+			</text>
+		}
+
+
+		<dt>
+			@Html.LabelFor(m => m.User.LastNameOrCompany)*
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.LastNameOrCompany)<br />
+			@Html.ValidationMessageFor(m => m.User.LastNameOrCompany)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.FirstName)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.FirstName)<br />
+			@Html.ValidationMessageFor(m => m.User.FirstName)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.MiddleInitial)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.MiddleInitial)<br />
+			@Html.ValidationMessageFor(m => m.User.MiddleInitial)
+		</dd>
+
+
+		<dt>
+			@Html.LabelFor(m => m.User.CourtesyTitleId)
+		</dt>
+		<dd>
+			@Html.DropDownListFor(m => m.User.CourtesyTitleId, Model.AvailableCourtesyTitles)<br />
+			@Html.ValidationMessageFor(m => m.User.CourtesyTitleId)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.Suffix)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.Suffix)<br />
+			@Html.ValidationMessageFor(m => m.User.Suffix)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.User.PreferredName)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.User.PreferredName)<br />
+			@Html.ValidationMessageFor(m => m.User.PreferredName)
+		</dd>
+
+
+
+		<dt>
+			@Html.LabelFor(m => m.Address)*
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.Address)<br />
+			@Html.ValidationMessageFor(m => m.Address)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.City)*
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.City)<br />
+			@Html.ValidationMessageFor(m => m.City)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.State)*
+		</dt>
+		<dd>
+			@Html.DropDownListFor(m => m.State, HPAuthenticate.ViewModels.UserViewModel.AvailableStates)<br />
+			@Html.ValidationMessageFor(m => m.State)
+		</dd>			
+
+
+		<dt>
+			@Html.LabelFor(m => m.PostalCode)*
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.PostalCode)<br />
+			@Html.ValidationMessageFor(m => m.PostalCode)
+		</dd>
+
+		<dt>
+			Phone number(s)*<br />
+			<span class='hint'>E.g. (806) 762-0181 x123</span><br />
+			<span class='hint'>Provide at least one number</span>
+		</dt>
+		<dd>
+			@Html.ValidationMessage("Number")
+			@Html.ValidationMessage("Extension")
+			@Html.Partial("_PhoneNumberForm", Model)
+
+			@Html.ValidationMessageFor(m => m.User.PhoneNumbers)
+		</dd>		
+
+		<dt></dt>
+		<dd>
+			@Html.Hidden("x_user_id", Request["x_user_id"], new { id = "x_user_id" })
+			<input type="submit" value="Create account"></input>
+		</dd>
+	</dl>
+	<div class="clear"></div>
+}
+
+<script type="text/javascript">
+
+	$(document).ready(function () {
+		$('#User_LastNameOrCompany').autocomplete({
+			source: function(request, response) {
+				$.ajax(
+					"@Url.Action("FindClients", "User")",
+					{
+						type: "POST",
+						data: {
+							term: request.term
+						},
+						success: function(data, textStatus, jqXHR) {
+							if (data.length == 0) {
+								data.push({DisplayName:'No matches found', DisplayAddress:['a new user record will be created'], selectable: false});
+							}
+							response(data);
+						},
+						error: function(jqXHR, textStatus, errorThrown) {
+							// Swallow it.
+						},
+						complete: function(jqXHR, textStatus) {
+
+						}
+					}
+				);
+			},
+			select: function(event, ui) {
+				if (ui.item.selectable === false) {
+					return false;
+				}
+				// Autofill the remaining form fields.
+				$('#User_LastNameOrCompany').val(ui.item.LastName);
+				$('#User_MiddleInitial').val(ui.item.MiddleInitial);
+				$('#User_FirstName').val(ui.item.FirstName);
+				$('#User_Suffix').val(ui.item.Suffix);
+				$('#User_PreferredName').val(ui.item.PreferredName);
+				$('#Address').val(ui.item.Address);
+				$('#City').val(ui.item.City);
+				$('#State').val(ui.item.State);
+				$('#PostalCode').val(ui.item.PostalCode);
+				$('#x_user_id').val(ui.item.UserId);
+
+				for (var i = 0; i < ui.item.PhoneNumbers.length; i++) {
+					addPhoneNumber(ui.item.PhoneNumbers[i].PhoneTypeId, ui.item.PhoneNumbers[i].Number);
+				}
+
+				return false;
+			}
+		}).data("autocomplete")._renderItem = function(ul, item) {
+			return $("<li></li>")
+				.data("item.autocomplete", item)
+				.append("<a>" + item.DisplayName + "<br><span>" + item.DisplayAddress + "</span></a>")
+				.appendTo(ul);
+		};
+
+		// Check availability of email address when entered
+		$('#User_Email').blur(function() {
+			var txtbox = $('#User_Email');
+			if (txtbox.val() && txtbox.valid()) {
+				$.ajax(
+					"@Url.Action("IsEmailAvailable", "User")",
+					{
+						type:"POST",
+						data: { email: txtbox.val() },
+						success: function(data, textStatus, jqXHR) {
+							if (data === true) {
+								$('#email_availability_status').removeClass('error').addClass('success').text('Email address available').show();
+							} else {
+								$('#email_availability_status').removeClass('success').addClass('error').text('Email address already taken! ').append('<a href="@Url.Action("ResetPassword", "Session")">Forgot password?</a>').show();
+							}
+						}
+					}
+				);
+			} else {
+				$('#email_availability_status').hide();
+			}
+
+		}).keydown(function() {
+			$('#email_availability_status').empty().hide();
+		});
+
+	});
+
+</script>

@@ -1,0 +1,9 @@
+﻿@{
+    ViewBag.Title = "Error";
+}
+
+<h2>An Error Has Occurred</h2>
+
+<p>Sorry! This application has run into an error. I've sent an email to administrators telling them about the problem.</p>
+
+@Html.Raw(ViewBag.ExceptionContent)

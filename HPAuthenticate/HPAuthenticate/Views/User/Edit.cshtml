@@ -1,0 +1,42 @@
+﻿@model HPAuthenticate.ViewModels.UserViewModel
+
+
+@{
+    ViewBag.Title = "Edit";
+}
+
+<h2>Edit Profile</h2>
+
+<dl class='form'>
+
+		@Html.LabelFor(m => m.Email)
+		</dt>
+		<dd>
+			@Html.TextBoxFor(m => m.Email)
+			@Html.ValidationMessageFor(m => m.Email)
+		</dd>
+
+		<dt>
+			@Html.LabelFor(m => m.Password) (leave blank to leave unchanged)
+		</dt>
+		<dd>
+			@Html.PasswordFor(m => m.Password)
+			@Html.ValidationMessageFor(m => m.Password)
+		</dd>
+		<dt>
+			@Html.LabelFor(m => m.PasswordConfirmation)
+		</dt>
+		<dd>
+			@Html.PasswordFor(m => m.PasswordConfirmation)
+			@Html.ValidationMessageFor(m => m.PasswordConfirmation)
+		</dd>
+
+</dl>
+
+@if (Model.IsOwnerAndProducer) {
+	<h3>Owners You Act For</h3>
+	
+	
+
+}
+

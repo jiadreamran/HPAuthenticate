@@ -1,0 +1,16 @@
+﻿@using HPAuthenticate.Helpers
+
+@helper GetPhoneNumberControl(Dictionary<string, string> phoneTypes, int controlIndex, int? phoneNumberId, int? phoneTypeId, string number, System.Web.Mvc.UrlHelper Url) {
+	if (phoneNumberId.HasValue) {
+		<input type="hidden" name="phone_number_id[@controlIndex]" value="@phoneNumberId.Value" /> 
+	}
+	<select name="phone_number_type[@controlIndex]">
+		@foreach (KeyValuePair<string, string> kv in phoneTypes) {
+			var selected = kv.Key == phoneTypeId.ToString() ? "selected='selected'" : "";
+			<option value="@kv.Key" @selected>@kv.Value</option>
+		}
+	</select>
+	<input type="text" name="phone_number[@controlIndex]" value="@number"/>
+	<a href='#' data-linktype='remove_phone_number'><img src="@Url.Image("minus-circle.png")" alt="Remove" title="Remove this number" /></a>
+	
+}

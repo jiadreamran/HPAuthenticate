@@ -1,0 +1,11 @@
+﻿@{
+    ViewBag.Title = "TestMail";
+}
+
+<h2>TestMail</h2>
+
+@using (Html.BeginForm()) {
+	@Html.TextArea("content")
+	@Html.TextBox("recipient")
+	<input type='submit' value='Send'></input>
+}

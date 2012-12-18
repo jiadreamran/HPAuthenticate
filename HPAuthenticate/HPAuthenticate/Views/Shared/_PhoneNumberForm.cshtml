@@ -1,0 +1,66 @@
+﻿@using HPAuthenticate.Helpers
+@model HPAuthenticate.ViewModels.UserViewModel
+@* Warning: This was designed to have only one on a form. 
+	It'll take revision if you ever need multiple controls on a single page due to use of IDs. *@
+
+			<ul id='phoneControl'>
+					@{
+						Model.PhoneIndex = 0;
+					}
+					@foreach (var number in Model.User.PhoneNumbers) {
+						<li>
+							@UserHelpers.GetPhoneNumberControl(Model.PhoneTypes, Model.PhoneIndex++, number.Id, number.PhoneTypeId, number.Number + (!string.IsNullOrWhiteSpace(number.Extension) ? "x" + number.Extension : ""), Url)
+						</li>
+				    }
+					<li>@UserHelpers.GetPhoneNumberControl(Model.PhoneTypes, Model.PhoneIndex++, null, null, "", Url)</li>
+					<li><a href='#' id='addNewPhoneNumber' class='add icon'>Add</a></li>
+			</ul>
+					@* Slightly-icky global JS variable lets us easily continue indexing additional phone number entries, see below *@
+					<script type='text/javascript'>
+						var phoneNumberIndex = @Model.PhoneIndex + 1;
+					</script>
+		
+
+<script type="text/javascript">
+	function getPhoneTypeSelector(numberTypeId) {
+		var sel = $('<select></select>').attr('name', 'phone_number_type[' + phoneNumberIndex + ']');
+		var options = @Html.Raw(Json.Encode(Model.PhoneTypes));
+		for (var opt in options) {
+			sel.append('<option value="' + opt + '"' + (opt == numberTypeId ? 'selected="selected"' : '') + '>' + options[opt] + '</option>');
+		}
+		
+		return sel;
+	};
+
+	/// Adds a phone number control immediately before the second-to-last <li> element in the phone number <ul>
+	function addPhoneNumber(numberTypeId, number) {
+		var target = $('#phoneControl li:last-child');
+		if (number) {
+			target = target.prev();
+		}
+		target.before(
+			$('<li></li>').append(
+				getPhoneTypeSelector(numberTypeId) // dropdown
+			).append(
+				$('<input type="text"></input>').attr('name', 'phone_number[' + phoneNumberIndex + ']').val(number)
+			).append(
+				$('<a href="#" data-linktype="remove_phone_number"></a>').append('<img src="@Url.Image("minus-circle.png")" alt="Remove" title="Remove this number"></img>')
+			)
+		);
+		phoneNumberIndex++;
+
+	};
+
+	$(document).ready(function () {
+		$('a[data-linktype="remove_phone_number"]').live('click', function() {
+			$(this).parent().remove();
+			return false;
+		});
+
+		$('#addNewPhoneNumber').click(function () {
+			addPhoneNumber();
+
+			return false;
+		});
+	});
+</script>

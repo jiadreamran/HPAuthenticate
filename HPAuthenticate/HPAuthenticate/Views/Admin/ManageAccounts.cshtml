@@ -1,0 +1,122 @@
+﻿@using HPAuthenticate.Helpers
+@{
+    ViewBag.Title = "ManageAccounts";
+}
+
+<h2>Manage User Accounts</h2>
+
+@using (@Html.BeginForm()) {
+	<p>Search by name or email: <input type='text' id='search_term' /></p>
+}
+
+<table id='search_results'>
+	<thead>
+		<tr>
+			<th>Id</th>
+			<th>Name</th>
+			<th>Email</th>
+			<th>Admin</th>
+		</tr>
+	</thead>
+	<tbody>
+		
+	</tbody>
+</table>
+
+
+<script type="text/javascript">
+	var ManageAccounts = (function () {
+		return {
+			searchIval: -1,
+			currentXhr: null,
+			events: {
+				updateAdmin: function(userId, isAdmin, statusElement) {
+					$.ajax(
+						"@Url.Action("SetAdmin", "Admin")",
+						{
+							type: "POST",
+							data: {
+								userId: userId,
+								isAdmin: isAdmin
+							},
+							success: function(data, textStatus, jqXHR) {
+								statusElement.empty().removeClass().show();
+								if (data.success) {
+									statusElement.addClass('success').text('Saved.')
+												.queue(function() {
+													var el = $(this);
+													setTimeout(function() { el.fadeOut(); }, 1000);
+													el.dequeue();
+												});
+								} else {
+									statusElement.addClass('error').text(data.error).show();
+								}
+							},
+							error: function(jqXHR, textStatus, errorThrown) {
+								statusElement.empty().removeClass().addClass('error').text("JSON error occurred: " + errorThrown).show();
+							}
+						}
+					);
+				}
+			}
+		};
+	})();
+	function search(term) {
+		// Cancel any pending request.
+		(ManageAccounts.currentXhr || { abort: function(){} } ).abort();
+
+		$.ajax(
+			"@Url.Action("FindClientsByNameOrEmail", "User")",
+			{
+				type: "POST",
+				data: {
+					term: term
+				},
+				success: function(data, textStatus, jqXHR) {
+					var tbody = $('#search_results > tbody').empty();
+					function cell(s) {
+						return $('<td></td>').text(s || '');
+					};
+
+					if (data.length == 0) {
+						tbody.append($('<tr><td colspan="4">No matching users found.</td></tr>'));
+					} else {
+						for (var i = 0; i < data.length; i++) {
+							tbody.append(
+								$('<tr></tr>')
+									.append(cell(data[i].UserId))
+									.append(cell(data[i].DisplayName))
+									.append(cell(data[i].Email))
+									.append(
+										$('<td></td>').append(
+											(data[i].IsAdminCandidate
+												? $('<input type="checkbox"' + (data[i].IsAdmin ? ' checked="checked"' : '') + ' data-event="updateAdmin" />')
+												: null)
+										).append('<span></span>')
+									)
+							);
+						}
+					}
+				},
+				error: function(jqXHR, textStatus, errorThrown) {
+					tbody.append($('<tr><td>Error thrown: ' + textStatus + '; ' + errorThrown + '</td></tr>'));
+				}
+			}
+		);
+	};
+
+	$(document).ready(function () {
+		$('#search_term').keyup(function () {
+			clearTimeout(ManageAccounts.searchIval);
+			var searchTerm = $(this).val();
+			ManageAccounts.searchIval = setTimeout(function () { search(searchTerm); }, 500);
+		});
+
+		$(':checkbox[data-event]').live('click', function() {
+			var uid = parseInt($(this).closest('tr').find('td:first-child').text());
+			ManageAccounts.events[$(this).data('event')](uid, $(this).is(':checked'), $(this).siblings('span'));
+		});
+
+	});
+
+</script>

@@ -1,0 +1,28 @@
+﻿@model HPAuthenticate.ViewModels.IProducerViewModel
+
+		<dt></dt>
+		<dd>
+			@Html.ValidationMessageFor(m => m.ProductionType) <br/ >
+			I, <span id='producer_disclaimer_name'>________________</span>, am legally authorized to produce and accurately report
+			groundwater use to  High Plains Underground Water Conservation District for
+			the following use:
+			<strong>
+				<label class='nobreak'>@Html.RadioButtonFor(m => m.ProductionType, HPEntities.Entities.Enums.DisclaimerDataType.agriculture)&nbsp;agriculture</label> / 
+				<label class='nobreak'>@Html.RadioButtonFor(m => m.ProductionType, HPEntities.Entities.Enums.DisclaimerDataType.mineral_production)&nbsp;mineral&nbsp;production</label> /
+				<label class='nobreak'>@Html.RadioButtonFor(m => m.ProductionType, HPEntities.Entities.Enums.DisclaimerDataType.industrial)&nbsp;industrial</label>
+			</strong>
+			By entering this information and pushing the "Create Account" button, I am warranting and
+			certifying that I have formally and specifically been designated the legally  
+			authorized representative to produce and report this consumption/use to the
+			High Plains Underground Water Conservation District.
+		</dd>
+
+<script type="text/javascript">
+	$(document).ready(function () {
+		$('#agent_name').change(function (e) {
+			var txtbox = $(e.target);
+			var agentName = $.trim(txtbox.val()).length > 0 ? txtbox.val() : '________________';
+			$('#producer_disclaimer_name').text(agentName);
+		});
+	});
+</script>
