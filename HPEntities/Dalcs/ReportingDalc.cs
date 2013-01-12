@@ -9,6 +9,7 @@ using HPEntities.Entities.JsonClasses;
 using System.Data;
 using HPEntities.Helpers;
 using System.Configuration;
+using Newtonsoft.Json;
 namespace HPEntities.Dalcs {
 	public class ReportingDalc : AuthDalcBase {
 
@@ -422,7 +423,40 @@ order by LastNameOrCompany asc;", new Param("@term", Config.Instance.FormatStrin
 		/// <param name="year"></param>
 		/// <param name="caId"></param>
 		public void UnsubmitCA(int year, int caId) {
-			ExecuteNonQuery(@"
+            // Get user ID we're dealing with, in order to properly
+            // delete the user's JSON summary state below
+            var userId = ExecuteScalar(@"
+select ActingUserId 
+from BankedWater 
+where 
+    OperatingYear = @year
+    and ContiguousAcresId = @id;", new Param("@year", year),
+                                 new Param("@id", caId)).ToInteger();
+
+            if (userId > 0) {
+                // Attempt to clean up the user's JSON
+                var rsJson = GetReportingSummary(userId);
+                ReportingSummary rs;
+                try {
+                    rs = JsonConvert.DeserializeObject<ReportingSummary>(rsJson);
+                    JsonReportingYear jsonYear;
+                    if (rs != null && rs.years.TryGetValue(year, out jsonYear)) {
+                        // Find and delete the offending CA.
+                        var index = jsonYear.contiguousAcres.FindIndex(ca => ca.number == caId);
+                        if (index > -1) {
+                            jsonYear.contiguousAcres.RemoveAt(index);
+                            SaveReportingSummary(new UserDalc().GetUser(userId),
+                                                JsonConvert.SerializeObject(rs),
+                                                false);
+                        }
+                    }
+                } catch (Exception ex) {
+                    // We tried, we failed. Give up.
+                }
+
+            }
+
+            ExecuteNonQuery(@"
 delete from BankedWater
 where
 	OperatingYear = @year
@@ -432,7 +466,8 @@ delete from ReportedMeterVolumes
 where
 	OperatingYear = @year
 	and ContiguousAcresId = @id;", new Param("@year", year),
-								 new Param("@id", caId));
+                     new Param("@id", caId));
+
 		}
 
 		public bool IsWellErrorResponseRecorded(int wellId, int userId) {
