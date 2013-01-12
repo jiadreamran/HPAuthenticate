@@ -8,8 +8,13 @@ using HPEntities.Entities;
 using HPEntities.Entities.JsonClasses;
 using System.Data;
 using HPEntities.Helpers;
+using System.Configuration;
 namespace HPEntities.Dalcs {
 	public class ReportingDalc : AuthDalcBase {
+
+        private static string dbTableSuffix = !string.IsNullOrEmpty(ConfigurationManager.AppSettings["gis_table_suffix"])
+                                        ? System.Text.RegularExpressions.Regex.Replace(ConfigurationManager.AppSettings["gis_table_suffix"], "[^A-Za-z_0-9]", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                                        : "";
 
 		/// <summary>
 		/// Retrieves a reporting summary object from the database for the specified user.
@@ -370,7 +375,7 @@ select
 	ca.description,
 	bw.OperatingYear
 from Clients c
-inner join HPWD_GIS.dbo.hp_contiguous_acres ca
+inner join HPWD_GIS.dbo.hp_contiguous_acres" + dbTableSuffix + @" ca
 	on ca.actingID = c.ClientID
 left join BankedWater bw
 	on bw.ContiguousAcresId = ca.caId
