@@ -374,6 +374,12 @@ namespace HPAuthenticate.Controllers {
 			// Go through and check all the submittal states of the CAs
 			foreach (var ca in pageState.years[CurrentReportingYear].contiguousAcres) {
 				ca.isSubmitted = rptgDalc.IsSubmitted(ca.number, CurrentReportingYear);
+                if (ca.isSubmitted) {
+                    // If it was a submitted CA, the banked water history table
+                    // still needs to be loaded because it wasn't set above.
+                    ca.bankedWaterHistory = getBankedWaterTable(ca.number);
+                }
+
 			}
 
 			return pageState;

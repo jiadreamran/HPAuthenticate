@@ -502,7 +502,7 @@ If you did not request this change to your email address, please ignore this mes
 
 		// Authorization required.
 		public JsonResult FindClientsByNameOrEmail(string term) {
-			return Json(new UserDalc().FindUsersByNameOrEmail(term, Config.Instance.AutocompleterResultLimit).Select(x => new UserViewModelMinimal(x)));
+			return Json(new UserDalc().FindUsersByNameOrEmail(term, Config.Instance.AutocompleterResultLimit).Select(x => new UserViewModelMinimal(x)), JsonRequestBehavior.AllowGet);
 		}
 
 		[AllowAnonymous] // Used anonymously from create user page
