@@ -14,14 +14,14 @@ namespace HPAuthenticate.Controllers
     public class ApplicationController : Controller {
 
 		protected override void Initialize(System.Web.Routing.RequestContext requestContext) {
-			base.Initialize(requestContext);
-			if (User != null && User.Identity != null) {
+            base.Initialize(requestContext);
+            if (User != null && User.Identity != null) {
 				ViewBag.CurrentUsername = User.Identity.Name;
 			}
 			ViewBag.IsAdmin = false;
 			ViewBag.Acting = false;
 			ViewBag.IsReportingDeployed = ConfigurationManager.AppSettings["is_reporting_deployed"].ToBoolean();
-		}
+        }
 
 		protected override void OnActionExecuting(ActionExecutingContext filterContext) {
 			// Certain variables are required regardless of the page - initialize them here.
@@ -39,8 +39,18 @@ namespace HPAuthenticate.Controllers
 				ViewBag.ActingUser = _actingUser;
 				ViewBag.ActualUser = _actualUser;
 				ViewBag.Acting = _actualUser.Id != _actingUser.Id;
+
+
 			}
 
+            
+            // If the site is set offline, unless the user is an admin,
+            // redirect to a maintenance page.
+            string appOfflineUrl = ConfigurationManager.AppSettings["app_offline"];
+            if (filterContext.ActionDescriptor.ActionName != "Login" && !string.IsNullOrEmpty(appOfflineUrl) && (_actualUser == null || !_actualUser.IsAdmin)) {
+                // Redirect
+                filterContext.Result = new RedirectResult(appOfflineUrl);
+            }
 
 			base.OnActionExecuting(filterContext);
 		}
