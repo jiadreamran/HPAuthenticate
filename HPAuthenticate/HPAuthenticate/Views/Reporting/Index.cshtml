@@ -908,7 +908,7 @@
                                     console.debug("_unitConversionFactors", _unitConversionFactors);
                                     console.debug("calcVol.unitId", calcVol.unitId);
                                     console.debug("_unitConversionFactors[calcVol.unitId]", _unitConversionFactors[calcVol.unitId]);
-                                    cFactor = _unitConversionFactors[calcVol.unitId][2];                                  
+                                    cFactor = (_unitConversionFactors[calcVol.unitId] || [1,1])[2];                                  
 									volume = (row.data('calcVol') || { volume: 0 }).volume;
 								} else {
                                     contigAcres.userRevisedVolume = true;
