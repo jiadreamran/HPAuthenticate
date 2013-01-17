@@ -155,7 +155,13 @@ namespace HPAuthenticate.Controllers {
 			if (contigAcres.Count() > 0) { // Only create the service if contigAcres has stuff, because SOAP takes time
 				var service = new GisServiceSoapClient();
 				foreach (var ca in contigAcres) {
-					string result = service.GetWellIDsByCA(ca.OBJECTID);
+                    string result = "";
+                    // This call is prone to failure whenever the GIS service is down.
+                    try {
+                        result = service.GetWellIDsByCA(ca.OBJECTID);
+                    } catch (Exception ex) {
+                        pageState.loadErrors.Add("Unable to load well associations for any CAs: the GIS service appears to be down!");
+                    }
 					try {
 						int[] ids = JsonConvert.DeserializeObject<int[]>(result.Trim('{', '}'));
 						wellIds[ca.caID] = new HashSet<int>(ids);
@@ -267,43 +273,7 @@ namespace HPAuthenticate.Controllers {
 				List<JsonContiguousAcres> removals = year.contiguousAcres.Where(ca => !ca.isSubmitted).ToList();
 				HashSet<int> submittedCaIds = new HashSet<int>(year.contiguousAcres.Where(ca => ca.isSubmitted).Select(x => x.number));
 				
-				/*
-				foreach (var ca in year.contiguousAcres) {
-					// * Submittal status - if any of the following are true, this CA is submitted:
-					//		- There's a record in ReportedMeterVolumes
-					//		- There's a record in BankedWater
-					ca.isSubmitted = rptgDalc.IsSubmitted(ca.number, CurrentReportingYear);
-					// Update historical banked water table
-					ca.bankedWaterHistory = getBankedWaterTable(ca.number);
 
-					// If the CA is for this reporting year, update the banked water carryover variable
-					JsonBankedWaterRecord bankedWaterLastYear;
-					ca.annualUsageSummary.bankedWaterFromPreviousYear = ca.bankedWaterHistory.TryGetValue(CurrentReportingYear - 1, out bankedWaterLastYear) ? bankedWaterLastYear.bankedInches : 0;
-
-					if (ca.isSubmitted) {
-						// Frozen - no further updates possible.
-						continue;
-					}
-
-					ca.annualUsageSummary.allowableApplicationRate = rptgDalc.GetAllowableProductionRate(CurrentReportingYear);
-
-					// Reload wells in every case; this is summary info/error responses built from db
-					HashSet<int> wids;
-					if (wellIds.TryGetValue(ca.number, out wids)) {
-						ca.wells = new WellDalc().GetWells(wids.ToArray()).Select(x => new JsonWell(x)).ToArray();
-					} else {
-						ca.wells = new JsonWell[] { };
-					}
-					// We also need to add any wells that are associated with meters associated with these wells.
-					// :S
-
-					if (!validAcres.ContainsKey(ca.number)) {
-						removals.Add(ca);
-					}
-
-
-				}
-				 */
 				// Ensure that all the CAs are still applicable to this account - the CA IDs need
 				// to match what's presently associated with the user account, else they're removed.
 				foreach (var ca in removals) {
