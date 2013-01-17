@@ -50,7 +50,6 @@
 					},
 					volume: 0,
 					unitId: 3, // HARDCODED: Unit identifier, gallons == 3
-                    runningTotal: 0, // Meng: runningTotal in inputed unit for each meter
 					rolloverOccurred: false
 				}),
 				MeterReading: Class.extend({
@@ -103,22 +102,21 @@
 		/// readings, also taking into consideration
 		/// rate changes in middle readings and rollover
 		/// values.
-		function _calculateVolume(reading, rolloverValue, county, countyId, meterType, unitId, nonStandardUnits, meterMultiplier, readings, ca, meterInstallationId) {
-			if (typeOf(readings) != 'array' || readings.length < (reading.isNozzlePackage ? 1 : 2)) {
+		function _calculateVolume(isNozzlePackage, rolloverValue, county, countyId, meterType, unitId, nonStandardUnits, meterMultiplier, readings, ca) {
+			if (typeOf(readings) != 'array' || readings.length < (isNozzlePackage ? 1 : 2)) {
                 console.debug("Not enough readings in the raw reading array!");
                 _notEnoughReadings.push(true);
 				throw new Errors.NoReadingsException();
 			}
-            //console.debug("readings: ", readings);
-            //console.debug("rolloverValue: ", rolloverValue);
-            console.debug("meterInstallationId: ", meterInstallationId); 
+            console.debug("readings: ", readings);
+            console.debug("rolloverValue: ", rolloverValue);
 			// There are some readings, but maybe not all of them are valid for
 			// calculating volume. (The dates have to fall within particular ranges.)
 			// Happily, the middleware figures this out for us; we just have to
 			// look at the isValidForCalculations property.
 			validReadings = [];
 			// If this is a nozzle package, then all readings are valid.
-			if (!reading.isNozzlePackage) {
+			if (!isNozzlePackage) {
 				for (var i = 0; i < readings.length; i++) {
 					if (readings[i].isValidBeginReading || readings[i].isValidEndReading) {
 						validReadings.push(readings[i]);
@@ -161,7 +159,7 @@
                 }
                 _hasBeginReading.push(hasBeginReadingThisMeter);
 
-                //console.debug("Has begin reading?: ", hasBeginReadingThisMeter);
+                console.debug("Has begin reading?: ", hasBeginReadingThisMeter);
 
                 if(!hasBeginReadingThisMeter){
                     throw new Errors.NoBeginReadingException();
@@ -171,7 +169,7 @@
 			// At this point, if we don't have enough readings, throw an exception
 			// and warn the user.
             var notEnoughReadings = false;
-			if (readings.length < (reading.isNozzlePackage ? 1 : 2)) {
+			if (readings.length < (isNozzlePackage ? 1 : 2)) {
                 _notEnoughReadings.push(true);
 				throw new Errors.NoReadingsException();
 			}
@@ -186,9 +184,8 @@
 			var runningTotal = 0;
 			var i = 1;
 			var delta = 0;
-			var ret = new Classes.CalculatedVolume(); 
-
-			if (reading.isNozzlePackage) {
+			var ret = new Classes.CalculatedVolume();
+			if (isNozzlePackage) {
 				// HARDCODED: Convert GPH to GPM by *60
 				runningTotal = prevReading.reading * prevReading.rate * 60;
 				currentReading = prevReading; // In case there's only one. This is only applicable for nozzle packages.
@@ -198,7 +195,7 @@
 				var currentReading = new Classes.MeterReading(readings[i].reading, readings[i].rate, unitId);
 				// If the meter is a nozzle package, we multiple the reading by rate and sum them.
 				// Else, we calculate a delta between this and the previous reading.
-				if (reading.isNozzlePackage) {
+				if (isNozzlePackage) {
 					// Multiply the reading (in hours) by the rate (in GPM) times 60 to get GPH
 					// HARDCODED: Unit assumptions, GPM -> GPH
 					runningTotal += currentReading.reading * currentReading.rate * 60;
@@ -218,73 +215,30 @@
 			}
 
 			ret.unitId = currentReading.unitId;
-            ret.runningTotal = runningTotal;
 
-            // Now this case can be used for electric, natural gas and third party
-			if (!reading.isNozzlePackage && meterType.toLowerCase() !== 'water meter') {
+			if (!isNozzlePackage && meterType.toLowerCase() !== 'water meter') {
 				var countyId = countyId;
 				console.debug('applying nonstandard unit conversion for ' + nonStandardUnits);
 				console.debug('multiplier: ' + (_meterUnitConversionFactors[countyId][nonStandardUnits.toLowerCase()] || 1));
 				console.debug('running total before: ' + runningTotal);
+				// Convert meter units as necessary - this will put runningTotal into ac-in.
+				runningTotal *= (_meterUnitConversionFactors[countyId][nonStandardUnits.toLowerCase()] || 1);
+				console.debug('running total after: ' + runningTotal);
 
-                if(reading.isNaturalGas || reading.isElectric)
-                {
-                    var squeezeValue = (reading.squeezeValue == null || reading.squeezeValue == 0) ? 0 : reading.squeezeValue;
-                    // Do nothing! Keep the raw reading.
-                    // OK here we need a notification that a squeeze number is needed. Question is, if it now has value, how to remove it?
-                    // TODO
-                    // Now we will use depth to redbed calculation, however we should set squeeze value default to 0
-                    if(reading.isElectric)
-                    {
-                        var baseLift = reading.depthToRedbed - 20;
-                        var adjLift = baseLift + squeezeValue * 2.3076;
-                        var ecf = adjLift / 0.462 * 0.085241556;
-                        runningTotal = runningTotal / ecf;
-
-                        console.debug("baseLift", baseLift);
-                        console.debug("adjLift", adjLift);
-                        console.debug("ecf", ecf);
-                        console.debug("calculatedVolume", runningTotal);
-                    }
-                    else
-                    {
-                        var baseLift = reading.depthToRedbed - 20;   
-                        var adjLift = baseLift + squeezeValue * 2.3076;
-                        var ecf = adjLift / 0.1325 * 0.000289205;
-                        runningTotal = runningTotal / ecf;
-
-                        console.debug("baseLift", baseLift);
-                        console.debug("adjLift", adjLift);
-                        console.debug("ecf", ecf);
-                        console.debug("calculatedVolume", runningTotal);
-                    }
-
-                    // Convert running total from ac-in to gallons.
-				    // HARDCODED - unit IDs!
-				    runningTotal *= _unitConversionFactors[2][3];
-                }
-                else
-                {
-				    // Convert meter units as necessary - this will put runningTotal into ac-in.
-				    runningTotal *= (_meterUnitConversionFactors[countyId][nonStandardUnits.toLowerCase()] || 1);
-				    console.debug('running total after: ' + runningTotal);
-
-				    // Convert running total from ac-in to gallons.
-				    // HARDCODED - unit IDs!
-				    runningTotal *= _unitConversionFactors[2][3];
-                }
+				// Convert running total from ac-in to gallons.
+				// HARDCODED - unit IDs!
+				runningTotal *= _unitConversionFactors[2][3]
 				console.debug('running total after ac-in to gal: ' + runningTotal);
 
 				ret.unitId = 3; // HARDCODED: Unit identifier, gallons == 3
 			}
 
-			var multiplier = (meterType.toLowerCase() == 'water meter' ? meterMultiplier : 1); // If it is not water meter, the multiplier will be not used. So don't worry about natural gas and electric
-            //console.debug('Multiplier: ' + multiplier);
+			var multiplier = (meterType.toLowerCase() == 'water meter' ? meterMultiplier : 1);
+            console.debug('Multiplier: ' + multiplier);
             multiplier = multiplier == 0 ? 1 : multiplier;
-            //console.debug('Revised multiplier: ' + multiplier);
+            console.debug('Revised multiplier: ' + multiplier);
 
 			ret.volume = runningTotal * multiplier;
-            //console.debug("ret.volume", ret.volume);
 			return ret;
 
 		};
@@ -360,19 +314,12 @@
 			for (var unitId in _state.unitDefinitions) {
 				// HARDCODE
 				// Warning - note hardcoded unit identifier 3 to default select Gallons
-                //console.debug("_state.unitDefinitions", _state.unitDefinitions);
+                console.debug("_state.unitDefinitions", _state.unitDefinitions);
 				sel.append('<option value="' + unitId + '"' + (unitId == 3 ? 'selected="selected"' : '') + '>' + _state.unitDefinitions[unitId] + '</option>');
 			}
 
 			return sel;
 		};
-
-        function _getSqueezeInputBox(name, defaultSqueezeValue)
-        {
-            var squeezeInput = $('<input type="text" style="width: 70px"></input>').attr('name', name).attr('id', name); 
-            squeezeInput.val(defaultSqueezeValue);
-            return squeezeInput;
-        }
 
 		/// Sets the total volume value of the relevant column for the
 		/// specified meterInstallationId.
@@ -444,8 +391,8 @@
                 }
             }
 
-            //console.debug("All meters are having a valid begin reading: ", hasValidBeginReadings)
-            //console.debug("All meters are having enough readings?: ", !_notEnoughReadingsAllMeters)
+            console.debug("All meters are having a valid begin reading: ", hasValidBeginReadings)
+            console.debug("All meters are having enough readings?: ", !_notEnoughReadingsAllMeters)
             ca.notEnoughReadingsForAllMeters = _notEnoughReadingsAllMeters;
 
             if(allowed == false && admin == false)
@@ -548,8 +495,7 @@
 
 
 		function _submitCA(contigAcres, callback) {
-			console.debug("CA: ", contigAcres);
-            var dto = { "state" : JSON.stringify(_state), "ca": JSON.stringify(contigAcres) };
+			var dto = { "state" : JSON.stringify(_state), "ca": JSON.stringify(contigAcres) };
 			var statusP = $('#submittal_status_' + contigAcres.number);
 			statusP.removeClass().addClass('ajax_loading').text('Submitting...').show();
 			$.ajax(
@@ -610,16 +556,12 @@
                 // Here is my logic to clean the CA-specific indication variables (all have begin readings, enough readings, etc.)
                 //*****************************************************************************************************************
                 _cleanCAIndicationVariables();
-                //console.debug("CA at the very begining: ", contigAcres);
+                console.debug("CA at the very begining: ", contigAcres);
+
 				var container = $('<div></div>').addClass('reporting_container').data('contigAcres', contigAcres);
 				var table = $('<table><thead><tr><th>Meter #</th><th>County</th><th>Begin Reading(s)</th><th>Ending Reading</th><th>Reading Units</th><th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th><th>Total Volume (acre-in)</th></tr></thead></table>');
-                //var table = $('<table><thead><tr><th>Meter #</th><th>County</th><th>Begin Reading(s)</th><th>Ending Reading</th><th>Reading Units</th><th>Calculated Volume</th>' + 
-                //            '<th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th><th>Total Volume (acre-in)</th></tr></thead></table>');
 				table.addClass('annual_usage');
 				var tbody = $('<tbody></tbody>');
-
-                // Added by Meng: a flag to indicate one more column need to have squeeze value in place.
-                var needOneMoreTd = false;
 
 				for (var meterInstallationId in contigAcres.meterReadings) {
 					// This is unfortunate for readability, but a closure is
@@ -627,19 +569,6 @@
 
 					reading = contigAcres.meterReadings[meterInstallationId];
 					//console.debug('whaaat...reading', meterInstallationId, contigAcres.meterReadings[meterInstallationId], reading);
-
-                    var isNaturalGasOrElectric = reading.isNaturalGas || reading.isElectric;
-                    
-                    if(isNaturalGasOrElectric)
-                    {
-                        // Add squeeze
-                        table = $('<table><thead><tr><th>Meter #</th><th>County</th><th>Begin Reading(s)</th>' + 
-                                '<th>Ending Reading</th><th>Reading Units</th><th>Squeeze Value</th>' + 
-                                '<th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th>' + 
-                                '<th>Total Volume (acre-in)</th></tr></thead></table>');
-
-                        needOneMoreTd = true;
-                    }
 
 					// TODO: if the meter doesn't exist anymore (was deleted), then we have no way to tell
 					// whether it was a nozzle package or not. Have to figure out a way around this somehow.
@@ -660,8 +589,8 @@
 					var calcVol = null;
 					var calcVolTd = $('<td></td>');
 					try {
-                        //console.debug("Raw reading: ", reading);
-						calcVol = _calculateVolume(reading, reading.rolloverValue, reading.county, reading.countyId, reading.meterType, reading.unitId, reading.nonStandardUnits, reading.meterMultiplier, reading.readings, contigAcres, meterInstallationId);
+                        console.debug("Raw reading: ", reading);
+						calcVol = _calculateVolume(reading.isNozzlePackage, reading.rolloverValue, reading.county, reading.countyId, reading.meterType, reading.unitId, reading.nonStandardUnits, reading.meterMultiplier, reading.readings, contigAcres);
 						calcVolTd.text(util.round(calcVol.volume));
 						if (calcVol.rolloverOccurred) {
 							// Present a warning icon to the user
@@ -700,24 +629,12 @@
 						}
 					}
 					// HARDCODED: Unit identifier, gallons == 3
-					//console.debug(calcVol, calcVol.unitId);
+					console.debug(calcVol, calcVol.unitId);
 					calcVolTd.data('volume_in_gallons', calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
-                    calcVolTd.data('running_total', calcVol.runningTotal);
-                    calcVolTd.data('depth_to_redbed', reading.depthToRedbed); // Depth to redbed should also be recorded in this td.
-
-                    // Set meter type here so that we can store it in the td for later electric/natural gas calculation use.
-                    if(reading.isNozzlePackage || reading.isElectric || reading.isNaturalGas || reading.isThirdParty)
-                    {     
-                        if(reading.isNozzlePackage)
-                            calcVolTd.data('meter_type', "nozzle package");
-                        else if(reading.isElectric)
-                            calcVolTd.data('meter_type', "electric");
-                        else if(reading.isNaturalGas)
-                            calcVolTd.data('meter_type', "natural gas");
-                        else if(reading.isThirdParty)
-                            calcVolTd.data('meter_type', "third party");
-                    }
-                    else{ calcVolTd.data('meter_type', "water meter"); }
+                    console.debug("calcVol.volume: ", calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
+                    console.debug("unit conversion factor?: ", _unitConversionFactors[calcVol.unitId] || {3:0})
+                    //console.debug("[3]: ", (_unitConversionFactors[calcVol.unitId] || {3:0})[3])
+                    //console.debug("Calculated volume?: ", calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
 
 					var beginReadingTd = $('<td></td>');
 					if (isNozzlePackage) {
@@ -735,113 +652,11 @@
 						beginReadingTd.text(beginReadings[0]);
 					}
 
-                    var squeezeInputBox = _getSqueezeInputBox("squeeze_input_" + contigAcres.number + '_' + meterInstallationId, reading.squeezeValue);
+
 					var acceptanceDropdown = _getAcceptanceDropdown(contigAcres, reading);
+
 					var calcUnitsDropdown = _getUnitDropdown("calc_vol_units_" + contigAcres.number + '_' + meterInstallationId);
-                    
-                    // Trick here: it seems the "blur change" has been used twice (why?????). 
-                    // So I am only going to change the volume data and the text in the second run.
-                    var count = 0;
-                    
-                    // OK one really important thing about this function:
-                    // reading and all other variables are stateless, which is to say, it will only remember the value it was last used.
-                    // For example in if we have three meters in this CA, and they are: electric, third party and natural gas,
-                    // the reading will always indicate the meter is a natural gas meter.
-                    // So we have to store the type value in the td.
-					squeezeInputBox.on('blur change', 
-                        function() {
-							// Use the next cell's gallon value to calculate acre inches
-                            count++; // update the counter, only update data when count == 2
-                            var nextTd = $(this).closest('td').next();
-							var gal = parseInt(nextTd.data('volume_in_gallons'));
-                            var runningTotal = parseInt(nextTd.data('running_total'));
-                            var depthToRedbed = parseFloat(nextTd.data('depth_to_redbed'));
-                            console.debug("runningTotal", runningTotal);
-                            console.debug("volumeInGallons", gal);
-                            
-                            // Trick here: since we did nothing in _calculateVolume function for electric and natural gas meters,
-                            // the "volume in gallons" will be the running total
-                            if(nextTd.data('meter_type') == "electric" || nextTd.data('meter_type') == "natural gas")
-                            {     
-                                if(nextTd.data('meter_type') == "electric")
-                                    console.debug("This is an electric meter");
-                                else if(nextTd.data('meter_type') == "natural gas")
-                                    console.debug("This is a natural gas meter");
-                            }
-
-                            if(nextTd.data('meter_type') == "electric" || nextTd.data('meter_type') == "natural gas")
-                            {
-                                console.debug("depthToRedbed in on blur change function: ", depthToRedbed);
-                                console.debug("$(this).val()", $(this).val());
-                                var inputSqueezeValue = $(this).val();
-                                var calculatedVolume = 0;
-
-                                if(reading.depthToRedbed != -99999)
-                                {
-                                    if(nextTd.data('meter_type') == "electric")
-                                    {
-                                        var baseLift = depthToRedbed - 20;
-                                        var adjLift = baseLift + inputSqueezeValue * 2.3076;
-                                        var ecf = adjLift / 0.462 * 0.085241556;
-                                        calculatedVolume = runningTotal / ecf;
-
-                                        console.debug("baseLift", baseLift);
-                                        console.debug("adjLift", adjLift);
-                                        console.debug("ecf", ecf);
-                                        console.debug("calculatedVolume", calculatedVolume);
-                                    }
-                                    else
-                                    {
-                                        var baseLift = depthToRedbed - 20;   
-                                        var adjLift = baseLift + inputSqueezeValue * 2.3076;
-                                        var ecf = adjLift / 0.1325 * 0.000289205;
-                                        calculatedVolume = runningTotal / ecf;
-
-                                        console.debug("baseLift", baseLift);
-                                        console.debug("adjLift", adjLift);
-                                        console.debug("ecf", ecf);
-                                        console.debug("calculatedVolume", calculatedVolume);
-                                    }
-
-                                    nextTd.next().next().next().text(util.round(calculatedVolume));
-
-                                    // Change the volume unit to gallons, since now the volume is in acre inches
-                                    calculatedVolume = calculatedVolume * _unitConversionFactors[2][3];
-                                    console.debug("_unitConversionFactors[2][3]", _unitConversionFactors[2][3]);
-
-                                    // Adjust the shown text according to the current used unit
-                                    var unitTd = nextTd.next();
-                                    console.debug("unitTd.val()", unitTd.find('option:selected').val());
-                                    if(count%2 === 0) // Meng: Caution: don't know if this will change in different environment!!!
-                                    {
-                                        nextTd.text(util.round(calculatedVolume * _unitConversionFactors[3][parseInt(unitTd.find('option:selected').val())]));
-                                        console.debug("result", util.round(calculatedVolume) * _unitConversionFactors[3][parseInt(unitTd.find('option:selected').val())]);
-                                        nextTd.data('volume_in_gallons', calculatedVolume);
-                                        //nextTd.text(util.round(calculatedVolume * _unitConversionFactors[3][parseInt(unitTd.val())]));
-
-                                        // Try updating total volume cell
-                                        var sum = 0;
-						                $(table).find('td.total_volume').each(function() {
-                                            // Meng: this is where total reported volume (in acre-in is calcuated)
-							                sum += parseFloat($(this).text());
-                                            console.debug("sum on squeeze changed: ", sum);
-						                });
-
-						                $(table).find('td.total_volume_sum').text(util.round(sum));
-                                        contigAcres.annualUsageSummary.annualVolume = parseInt(sum);
-
-                                        console.debug("sum", sum);
-                                        var tr = $(this).closest('tr.meter_usage_row');
-							            // Update the boolean indicating whether to accept the calculation
-							            tr.data('meterReading').squeezeValue = inputSqueezeValue;
-                                        console.debug("tr.data('meterReading').squeezeValue", tr.data('meterReading').squeezeValue);
-                                    }
-                                }
-                            }
-                        }
-                    );
-                    
-                    calcUnitsDropdown.change((function(calcVol) {
+					calcUnitsDropdown.change((function(calcVol) {
 						return function() {
 							// Adjust the value in the previous cell (calculated volume cell) to the desired units.
 							var prevTd = $(this).closest('td').prev();
@@ -849,6 +664,11 @@
 							var gals = parseInt(prevTd.data('volume_in_gallons'));
                             // Hard code: since we convert the unit to Gallons, we should always use "3" here as the conversion factor matrix index
 							prevTd.text(util.round(gals * _unitConversionFactors[3][parseInt($(this).val())]));
+                            //console.debug("Gals: ", gals);
+                            console.debug("Unit Coversion Factor: ", _unitConversionFactors[3]);
+                            console.debug("Selected unit index(?): ", [parseInt($(this).val())]);
+                            console.debug("Calcualted volume: ", util.round(gals * _unitConversionFactors[3][parseInt($(this).val())]));
+                            //console.debug("calcVol: ", calcVol);
 						};
 					})(calcVol));
 
@@ -868,8 +688,6 @@
 						).append(
 							$('<td></td>').text(reading.nonStandardUnits || _state.unitDefinitions[readingUnitId] || ' ')
 						).append(
-                            (needOneMoreTd ? (isNaturalGasOrElectric ? $('<td></td>').append(squeezeInputBox) : $('<td></td>')) : null)
-                        ).append(
 							calcVolTd
 						).append(
 							$('<td></td>').append(calcUnitsDropdown)
@@ -906,8 +724,6 @@
 									// This assumes gallons == 3 and acre-inches == 2.
 									//cFactor = _unitConversionFactors[3][2];
                                     console.debug("_unitConversionFactors", _unitConversionFactors);
-                                    console.debug("calcVol.unitId", calcVol.unitId);
-                                    console.debug("_unitConversionFactors[calcVol.unitId]", _unitConversionFactors[calcVol.unitId]);
                                     cFactor = (_unitConversionFactors[calcVol.unitId] || [1,1])[2];                                  
 									volume = (row.data('calcVol') || { volume: 0 }).volume;
 								} else {
@@ -918,7 +734,7 @@
 								}
 
                                 console.debug("cFactor: ", cFactor);
-                                //console.debug("volume: ", volume);
+                                console.debug("volume: ", volume);
 								// Display to 3 decimal places, converted to ac-in
 								volume = (Math.round(1000 * (volume * cFactor)) / 1000) || 0;
 
@@ -996,7 +812,7 @@
 				table.append(
 					$('<tfoot></tfoot>').append(
 						$('<tr></tr>').append(
-							$('<td colspan=' + (needOneMoreTd ? "9" : "8") + '></td>').text('Total:')
+							$('<td colspan="8"></td>').text('Total:')
 						).append(
 							$('<td></td>').addClass('total_volume_sum').attr('id', 'total_vol_' + contigAcres.number)
 						)
@@ -1005,9 +821,7 @@
 					return function() {
 						var sum = 0;
 						$(table).find('td.total_volume').each(function() {
-                            // Meng: this is where total reported volume (in acre-in is calcuated)
 							sum += parseFloat($(this).text());
-                            console.debug("sum: ", sum, "parseFloat($(this).text()): ", parseFloat($(this).text()));
 						});
 
 						$(table).find('td.total_volume_sum').text(util.round(sum));
@@ -1121,7 +935,7 @@
                                 //contigAcres.isFakingValidReadings = $('isFakingValidReadings_' + contigAcres.number).val();
                                 //contigAcres.userRevisedVolume = _userRevisedVolume;
                                 //contigAcres.notEnoughReadingsForAllMeters = _notEnoughReadingsAllMeters;
-                                //console.debug("CA after expand node: ", contigAcres);
+                                console.debug("CA after expand node: ", contigAcres);
 								_submitCA(contigAcres, function(data, textStatus, jqXHR) {
 									container.find('input, select').attr('disabled', 'disabled');
 									$('#submittal_status_' + contigAcres.number).addClass('success').text('Submittal complete!').show();
