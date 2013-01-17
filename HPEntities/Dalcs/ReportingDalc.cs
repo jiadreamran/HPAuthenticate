@@ -444,6 +444,25 @@ where
                         // Find and delete the offending CA.
                         var index = jsonYear.contiguousAcres.FindIndex(ca => ca.number == caId);
                         if (index > -1) {
+                            // Delete any ReportingErrorResponses for this CA.
+                            foreach (var kv in jsonYear.contiguousAcres[index].meterInstallationErrors) {
+                                // Key: meter installation ID.
+                                ExecuteNonQuery(@"
+delete from ReportingErrorResponses
+where
+    MeterInstallationId = @miid
+    and ActingUserId = @userId;", new Param("@miid", kv.Key), new Param("@userId", userId));
+                            }
+
+                            foreach (var well in jsonYear.contiguousAcres[index].wells) {
+                                ExecuteNonQuery(@"
+delete from ReportingErrorResponses
+where
+    WellID = @wellId
+    and ActingUserId = @userId;", new Param("@wellId", well.id), new Param("@userId", userId));
+                            }
+
+                            // Remove the CA from serialized JSON and save the revised JSON to the db.
                             jsonYear.contiguousAcres.RemoveAt(index);
                             SaveReportingSummary(new UserDalc().GetUser(userId),
                                                 JsonConvert.SerializeObject(rs),
