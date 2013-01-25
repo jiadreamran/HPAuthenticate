@@ -1440,7 +1440,19 @@
 									return false;
 								}
 
-								contigAcres.annualUsageSummary.desiredBankInches = parseInt($('#desired_bank_' + contigAcres.number).val()) || 0;
+
+								var desiredInches = parseInt($('#desired_bank_' + contigAcres.number).val()) || 0;
+								var maxBank = contigAcres.annualUsageSummary.allowableApplicationRate;
+								if (desiredInches > maxBank) {
+									if (confirm('You cannot bank more than ' + maxBank + ' inches. Shall I automatically adjust the desired bank amount to this value?')) {
+										desiredInches = maxBank;
+										$('#desired_bank_' + contigAcres.number).val(maxBank);
+									} else {
+										// Return - we cannot save in this condition.
+										return false;
+									}
+								}
+								contigAcres.annualUsageSummary.desiredBankInches = desiredInches;
                                 //contigAcres.isFakingValidReadings = _isFakingValidReadings;
                                 //contigAcres.userRevisedVolume = _userRevisedVolume;
 								_submitCA(contigAcres, function(data, textStatus, jqXHR) {

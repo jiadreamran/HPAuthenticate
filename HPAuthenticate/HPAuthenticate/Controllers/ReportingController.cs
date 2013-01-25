@@ -435,6 +435,12 @@ namespace HPAuthenticate.Controllers {
 
 		#region Validation support
 
+        /// <summary>
+        /// Validates CA for usage submittal. Assumes current reporting year.
+        /// </summary>
+        /// <param name="ca"></param>
+        /// <param name="errors"></param>
+        /// <returns></returns>
 		protected bool ValidateContiguousAcres(JsonContiguousAcres ca, out List<string> errors) {
 			errors = new List<string>();
             if (ca.isFakingValidReadings)
@@ -494,7 +500,15 @@ namespace HPAuthenticate.Controllers {
 					errors.Add("Desired water bank value cannot be negative.");
 				}
 
+                // Retrieve allowable application rate for this year
+                // It's also on the submitted CA JSON, but we cannot 
+                // trust the client here!
 				var rdalc = new ReportingDalc();
+                var allowableRate = rdalc.GetAllowableProductionRate(CurrentReportingYear);
+                if (ca.annualUsageSummary.desiredBankInches > allowableRate) {
+                    errors.Add(string.Format("You cannot bank more than {0} inches for this reporting year.", allowableRate));
+                }
+
 				// Check all associated wells
 				foreach (var well in ca.wells) {
 					if (well.meterInstallationIds.Length == 0) {
