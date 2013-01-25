@@ -84,40 +84,42 @@
 											var table = $('<table><thead><tr><th>Contiguous Acres</th><th>Submittal Status</th></tr></thead></table>');
 											var tbody = $('<tbody></tbody>');
 											for (var j = 0; j < data[i].years[year].length; j++) {
-												var ca = data[i].years[year][j];
-												tbody.append($('<tr></tr>').append(
-														$('<td></td>').text(ca.number + ': ' + ca.description)
-													).append(
-														$('<td></td>').append(
-															ca.isSubmitted 
-																? $('<a href="#">Submitted (click to unsubmit)</a>').click(function() {
-																		var anchor = $(this);
-																		if (confirm('Are you sure you want to unsubmit this CA? This will delete the user\'s previous submittals and allow him to resubmit.')) {
-																			$.ajax(
-																				"@Url.Action("UnsubmitCA", "Admin")",
-																				{
-																					type: "POST",
-																					dataType: "json",
-																					data: {
-																						year: year,
-																						caId: ca.number
-																					},
-																					success: function(data, textStatus, jqXHR) {
-																						var td = anchor.closest('td');
-																						td.empty().addClass('success').text('Unsubmitted.');
-																					},
-																					error: function(jqXHR, textStatus, errorThrown) {
-																						anchor.closest('td').append($('<p class="error">An error occurred: ' + errorThrown + '</p>'))
-																					}
-																				}
-																			);
-																		}
-																		return false;
-																	})
-																: 'Unsubmitted'
-														)
-													)
-												);
+                                                // Closure to preserve CA, year
+                                                (function(ca, year) {
+												    tbody.append($('<tr></tr>').append(
+														    $('<td></td>').text(ca.number + ': ' + ca.description)
+													    ).append(
+														    $('<td></td>').append(
+															    ca.isSubmitted 
+																    ? $('<a href="#">Submitted (click to unsubmit)</a>').click(function() {
+																		    var anchor = $(this);
+																		    if (confirm('Are you sure you want to unsubmit this CA? This will delete the user\'s previous submittals and allow him to resubmit.')) {
+																			    $.ajax(
+																				    "@Url.Action("UnsubmitCA", "Admin")",
+																				    {
+																					    type: "POST",
+																					    dataType: "json",
+																					    data: {
+																						    year: year,
+																						    caId: ca.number
+																					    },
+																					    success: function(data, textStatus, jqXHR) {
+																						    var td = anchor.closest('td');
+																						    td.empty().addClass('success').text('Unsubmitted.');
+																					    },
+																					    error: function(jqXHR, textStatus, errorThrown) {
+																						    anchor.closest('td').append($('<p class="error">An error occurred: ' + errorThrown + '</p>'))
+																					    }
+																				    }
+																			    );
+																		    }
+																		    return false;
+																	    })
+																    : 'Unsubmitted'
+														    )
+													    )
+												    );
+                                                })(data[i].years[year][j], year);
 											}
 											table.append(tbody);
 											div.append(
