@@ -724,7 +724,8 @@
 									// This assumes gallons == 3 and acre-inches == 2.
 									//cFactor = _unitConversionFactors[3][2];
                                     console.debug("_unitConversionFactors", _unitConversionFactors);
-                                    cFactor = (_unitConversionFactors[calcVol.unitId] || [1,1])[2];                                  
+                                    					//cFactor = (_unitConversionFactors[calcVol.unitId] || [1,1])[2];                                  
+                                    					cFactor = (_unitConversionFactors[row.data('calcVol').unitId] || [1,1])[2];                                  
 									volume = (row.data('calcVol') || { volume: 0 }).volume;
 								} else {
                                     contigAcres.userRevisedVolume = true;
