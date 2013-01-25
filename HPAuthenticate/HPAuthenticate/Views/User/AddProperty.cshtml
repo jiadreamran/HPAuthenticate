@@ -18,15 +18,6 @@
 @using (Html.BeginForm(ViewContext.Controller.ValueProvider.GetValue("action").RawValue.ToString(), ViewContext.Controller.ValueProvider.GetValue("controller").RawValue.ToString(), FormMethod.Post, new { autocomplete = "off" })) {
 	@Html.ValidationSummary(true, "Unable to add property; please correct the errors and try again.")
 
-	<dl class='form'>
-		<dt></dt>
-		<dd>
-			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.owner, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.owner, new { id = "radOwner" }) Owner (only)</label><br>
-			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.installer, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.installer, new { id = "radInstaller" }) Water Meter Installer (only)</label><br />
-			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.authorized_producer, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.authorized_producer, new { id = "radTenant" }) Operator (a legally authorized representative of the "owner" such as a tenant or farm manager)</label>
-		</dd>
-	</dl>
-
 	<div id='agent_form'>
 	<dl class="form">
 		<dt>

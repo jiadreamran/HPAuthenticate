@@ -100,14 +100,6 @@ namespace HPAuthenticate.Controllers {
 					// Descriptions are the only field likely to have them at all - custom/parcel ID are
 					// integers, and no county in its right mind would name itself with a pipe character.
 					var p = new Property(ar[0].TryToInteger(), ar[1], ar[2], string.Join("|", ar.Skip(3).ToArray()));
-					
-					/*
-					if (p.IsNew && (vm.PropertyRole != PropertyRole.owner && vm.PropertyRole != PropertyRole.authorized_producer)) {
-						// This is a problem; only owners are allowed to add new properties.
-						propDescValidationErrors.Add("You must be an owner to add new properties.");
-						break;
-					}
-					 */
 
 					// MWinckler.20111101: Nobody is allowed to add new properties, at least for now.
 					// Therefore, if it's marked as new (i.e. the user tried to inject it into the page),
@@ -163,8 +155,8 @@ namespace HPAuthenticate.Controllers {
 					if (!string.IsNullOrWhiteSpace(desc.ParcelId)) {
 						propDalc.UpdateAppraisalRollDataAsNecessary(ActingUser.Id, desc.ParcelId, desc.County, vm.OwnerMailingAddress, vm.OwnerCity, vm.OwnerState, vm.OwnerZip, vm.OwnerPhone);
 					}
-					// Associate the existing property to this user in the role specified.
-					propDalc.AssociateProperty(ActingUser, desc, vm.PropertyRole, (vm.PropertyRole != PropertyRole.owner), vm.ProductionTypes, vm.IsDataWrong);
+					// Associate the existing property to this user as an operator.
+					propDalc.AssociateProperty(ActingUser, desc, PropertyRole.authorized_producer, true, vm.ProductionTypes, vm.IsDataWrong);
 				}
 
 				this.FlashInfo("Property added.");
