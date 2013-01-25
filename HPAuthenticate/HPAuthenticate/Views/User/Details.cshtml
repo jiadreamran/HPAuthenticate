@@ -7,65 +7,6 @@
 }
 
 
-<h2>Property Descriptions</h2>
-
-<p>
-	These are properties you own or are authorized to produce groundwater for. 
-	To remove a property from this list, click the deletion icon (<img alt='Delete' src="@Url.Image("cross.png")"></img>) next to it.	
-</p>
-
-<p>Add property @Html.ActionLink("using owner name", "AddProperty") or <a href="@Url.Content("/hpuwcd/index.html?config=config-menu-ap.xml")">by map location</a>.</p>
-
-
-<table class='property_listing'>
-	<thead>
-		<tr>
-			<th></th> @* Flag column *@
-			<th>County</th>
-			<th>Parcel ID</th>
-			<th>Property description</th>
-			<th>Address</th>
-			<th>Owner name</th>
-			<th>My role</th>
-			<th></th>
-		</tr>
-	</thead>
-	<tbody>
-		@if (Model.Properties.Count == 0) {
-			<tr>
-				<td colspan='5'>No properties found! @Html.ActionLink("Add one now", "AddProperty").</td>
-			</tr>
-		} else {
-			foreach (var propAssoc in Model.Properties) {
-				<tr>
-					<td>
-						@if (propAssoc.Property.IsAppraisalRollDataModified) {
-							<img src="@Url.Image("asterisk.png")" alt="*" title="Owner data has been user-modified and differs from appraisal district data." />
-						}
-					</td>
-					<td>@propAssoc.Property.County</td>
-					<td>@propAssoc.Property.ParcelId</td>
-					<td>@propAssoc.Property.Description</td>
-					<td>
-						@propAssoc.Property.Address.Replace(' ', (char)160).Trim(',', ' ', (char)160) <br />
-						@string.Format("{1},{0}{2}{0}{3}", (char)160, @propAssoc.Property.City, @propAssoc.Property.State, @propAssoc.Property.Zip).Trim(',', ' ', (char)160)
-					</td>
-					<td>@propAssoc.Property.OwnerName</td>
-					<td>@propAssoc.Role.Description()</td>
-					<td>
-						@using (Html.BeginForm("DeleteProperty", "User", FormMethod.Post)) {
-							@Html.Hidden("clientPropertyId", propAssoc.Id)
-							<input type="image" data-needs-confirm="true" src="@Url.Image("cross.png")"></input>
-						}
-					</td>
-				</tr>
-			}
-		}
-	</tbody>
-</table>
-
-
-
 <h2>User Details</h2>
 
 <h3>Personal Information</h3>
@@ -205,6 +146,55 @@
 		</dd>
 	</dl>
 }
+
+
+<h2>Property Descriptions</h2>
+
+<p>
+	These are properties you own or are authorized to produce groundwater for. 
+	To remove a property from this list, click the deletion icon (<img alt='Delete' src="@Url.Image("cross.png")"></img>) next to it.	
+</p>
+
+<p>Add property @Html.ActionLink("using owner name", "AddProperty") or <a href="@Url.Content("/hpuwcd/index.html?config=config-menu-ap.xml")">by map location</a>.</p>
+
+
+<table class='property_listing'>
+	<thead>
+		<tr>
+			<th></th> @* Flag column *@
+			<th>County</th>
+			<th>Parcel ID</th>
+			<th>Property description</th>
+			<th></th>
+		</tr>
+	</thead>
+	<tbody>
+		@if (Model.Properties.Count == 0) {
+			<tr>
+				<td colspan='5'>No properties found! @Html.ActionLink("Add one now", "AddProperty").</td>
+			</tr>
+		} else {
+			foreach (var propAssoc in Model.Properties) {
+				<tr>
+					<td>
+						@if (propAssoc.Property.IsAppraisalRollDataModified) {
+							<img src="@Url.Image("asterisk.png")" alt="*" title="Owner data has been user-modified and differs from appraisal district data." />
+						}
+					</td>
+					<td>@propAssoc.Property.County</td>
+					<td>@propAssoc.Property.ParcelId</td>
+					<td>@propAssoc.Property.Description</td>
+					<td>
+						@using (Html.BeginForm("DeleteProperty", "User", FormMethod.Post)) {
+							@Html.Hidden("clientPropertyId", propAssoc.Id)
+							<input type="image" data-needs-confirm="true" src="@Url.Image("cross.png")"></input>
+						}
+					</td>
+				</tr>
+			}
+		}
+	</tbody>
+</table>
 
 
 
