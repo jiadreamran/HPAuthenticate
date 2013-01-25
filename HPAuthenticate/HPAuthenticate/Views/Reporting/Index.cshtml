@@ -847,6 +847,7 @@
 						// Update water banking section
 						$('#surplus_tag_' + contigAcres.number).text((surplusTotal >= 0 ? "surplus" : "deficit") + " of " + util.round(Math.abs(surplusTotal)) + " inches");
 						$('#max_bank_' + contigAcres.number).text(util.round(Math.max(surplusTotal, 0)));
+                        $('#desired_bank_' + contigAcres.number).val(parseInt(Math.max(surplusTotal, 0)));
 					};
 				})(table, summaryTable, contigAcres));
 
@@ -1019,8 +1020,6 @@
 								var well = caObj.wells[i];
 								var td = $('<td></td>').text(well.meterInstallationIds.join(', ')).addClass('miids_cell');
 								var row = $('<tr></tr>').append(
-										$('<td></td>').text(well.id)
-									).append(
 										$('<td></td>').text(well.permitNumber)
 									).append(
 										td
@@ -1157,7 +1156,7 @@
 								body.append($('<tr><td colspan="3">There are no meters or wells currently mapped within this CA.  If you want to report on water usage in this CA, please create a well on the map using the "Identify Missing Wells" tool, and then contact the District to follow-up on permitting the missing well.</td></tr>'));
 							}
 							t = $('<table></table>').append(
-								$('<thead><tr><th>Well ID</th><th>Permit #</th><th>Meter #</th></tr></thead>')
+								$('<thead><tr><th>Permit #</th><th>Meter #</th></tr></thead>')
 							).append(
 								body
 							).addClass('well_meter_table');

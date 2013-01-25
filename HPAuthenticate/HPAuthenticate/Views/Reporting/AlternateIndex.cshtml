@@ -1542,8 +1542,6 @@
 							break;
 					}
 					var row = $('<tr></tr>').append(
-							$('<td></td>').text(well.id)
-						).append(
 							$('<td></td>').text(well.permitNumber)
 						).append(
 							td
@@ -1720,7 +1718,7 @@
 				}
 
 				t = $('<table></table>').append(
-					$('<thead><tr><th>Well ID</th><th>Permit #</th><th id="well_meter_table_meter_number">Meter #</th></tr></thead>')
+					$('<thead><tr><th>Permit #</th><th id="well_meter_table_meter_number">Meter #</th></tr></thead>')
 				).append(
 					body
 				).addClass('well_meter_table');
