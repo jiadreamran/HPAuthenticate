@@ -77,15 +77,6 @@ namespace HPAuthenticate.ViewModels {
 		#region Validation Helpers
 
 
-		public static ValidationResult ValidateProductionType(DisclaimerDataType dataType, ValidationContext context) {
-			// Installers are not required to select a production type.
-			if (((NewPropertyViewModel)context.ObjectInstance).PropertyRole == PropertyRole.installer) {
-				return ValidationResult.Success;
-			}
-
-			return (dataType != DisclaimerDataType.none ? ValidationResult.Success : new ValidationResult("You must select at least one property type."));
-		}
-
 		public static ValidationResult ValidatePostalCode(string value, ValidationContext context) {
 			if (!((NewPropertyViewModel)context.ObjectInstance).RequireAddress
 					|| Regex.IsMatch(value, @"^(\d{5})(-\d{4})?$")) {
@@ -123,11 +114,6 @@ namespace HPAuthenticate.ViewModels {
 		/// <summary>
 		/// This represents the set of flags stored in the database for one or more production types.
 		/// </summary>
-		[CustomValidation(
-			typeof(NewPropertyViewModel), 
-			"ValidateProductionType",
-			ErrorMessage = "You must select at least one production type."
-		)]
 		public DisclaimerDataType ProductionTypes { get; set; }
 
 		public bool ProductionTypeAgriculture {
