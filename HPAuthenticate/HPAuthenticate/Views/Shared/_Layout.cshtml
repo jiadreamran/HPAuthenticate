@@ -65,12 +65,8 @@
 					<li>@Html.ActionLink("Login", "Login", "Session")</li>
  } else {
 					<li>@Html.ActionLink("My Account", "Details", "User")</li>
-	 if (ViewBag.ActingUser.Properties.Count > 0) {
 					<li><a id='link_reporting' title="Report a meter installation or an alternate method" href="@Url.Content("/hpuwcd/index.html?config=config-menu.xml")">Reporting</a></li>
-		 if (ViewBag.IsReportingDeployed != null && ViewBag.IsReportingDeployed) {
 					<li>@Html.ActionLink("Annual Report", "Index", "Reporting")</li>
-		 }
-	 }
 					<li>@Html.ActionLink("Logout", "Logout", "Session")</li>
  }
 					@if (ViewBag.IsAdmin) {
