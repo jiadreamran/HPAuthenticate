@@ -637,7 +637,7 @@
                                 '<th>Ending Reading</th><th>Reading Units</th><th>Squeeze Value</th>' + 
                                 '<th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th>' + 
                                 '<th>Total Volume (acre-in)</th></tr></thead></table>');
-
+                        table.addClass('annual_usage');
                         needOneMoreTd = true;
                     }
 
@@ -739,19 +739,14 @@
 					var acceptanceDropdown = _getAcceptanceDropdown(contigAcres, reading);
 					var calcUnitsDropdown = _getUnitDropdown("calc_vol_units_" + contigAcres.number + '_' + meterInstallationId);
                     
-                    // Trick here: it seems the "blur change" has been used twice (why?????). 
-                    // So I am only going to change the volume data and the text in the second run.
-                    var count = 0;
-                    
                     // OK one really important thing about this function:
                     // reading and all other variables are stateless, which is to say, it will only remember the value it was last used.
                     // For example in if we have three meters in this CA, and they are: electric, third party and natural gas,
                     // the reading will always indicate the meter is a natural gas meter.
                     // So we have to store the type value in the td.
-					squeezeInputBox.on('blur change', 
+					squeezeInputBox.on('change', 
                         function() {
 							// Use the next cell's gallon value to calculate acre inches
-                            count++; // update the counter, only update data when count == 2
                             var nextTd = $(this).closest('td').next();
 							var gal = parseInt(nextTd.data('volume_in_gallons'));
                             var runningTotal = parseInt(nextTd.data('running_total'));
@@ -812,30 +807,28 @@
                                     // Adjust the shown text according to the current used unit
                                     var unitTd = nextTd.next();
                                     console.debug("unitTd.val()", unitTd.find('option:selected').val());
-                                    if(count%2 === 0) // Meng: Caution: don't know if this will change in different environment!!!
-                                    {
-                                        nextTd.text(util.round(calculatedVolume * _unitConversionFactors[3][parseInt(unitTd.find('option:selected').val())]));
-                                        console.debug("result", util.round(calculatedVolume) * _unitConversionFactors[3][parseInt(unitTd.find('option:selected').val())]);
-                                        nextTd.data('volume_in_gallons', calculatedVolume);
-                                        //nextTd.text(util.round(calculatedVolume * _unitConversionFactors[3][parseInt(unitTd.val())]));
 
-                                        // Try updating total volume cell
-                                        var sum = 0;
-						                $(table).find('td.total_volume').each(function() {
-                                            // Meng: this is where total reported volume (in acre-in is calcuated)
-							                sum += parseFloat($(this).text());
-                                            console.debug("sum on squeeze changed: ", sum);
-						                });
+                                    nextTd.text(util.round(calculatedVolume * _unitConversionFactors[3][parseInt(unitTd.find('option:selected').val())]));
+                                    console.debug("result", util.round(calculatedVolume) * _unitConversionFactors[3][parseInt(unitTd.find('option:selected').val())]);
+                                    nextTd.data('volume_in_gallons', calculatedVolume);
+                                    //nextTd.text(util.round(calculatedVolume * _unitConversionFactors[3][parseInt(unitTd.val())]));
 
-						                $(table).find('td.total_volume_sum').text(util.round(sum));
-                                        contigAcres.annualUsageSummary.annualVolume = parseInt(sum);
+                                    // Try updating total volume cell
+                                    var sum = 0;
+					                $(table).find('td.total_volume').each(function() {
+                                        // Meng: this is where total reported volume (in acre-in is calcuated)
+						                sum += parseFloat($(this).text());
+                                        console.debug("sum on squeeze changed: ", sum);
+					                });
 
-                                        console.debug("sum", sum);
-                                        var tr = $(this).closest('tr.meter_usage_row');
-							            // Update the boolean indicating whether to accept the calculation
-							            tr.data('meterReading').squeezeValue = inputSqueezeValue;
-                                        console.debug("tr.data('meterReading').squeezeValue", tr.data('meterReading').squeezeValue);
-                                    }
+					                $(table).find('td.total_volume_sum').text(util.round(sum));
+                                    contigAcres.annualUsageSummary.annualVolume = parseInt(sum);
+
+                                    console.debug("sum", sum);
+                                    var tr = $(this).closest('tr.meter_usage_row');
+						            // Update the boolean indicating whether to accept the calculation
+						            tr.data('meterReading').squeezeValue = inputSqueezeValue;
+                                    console.debug("tr.data('meterReading').squeezeValue", tr.data('meterReading').squeezeValue);
                                 }
                             }
                         }
