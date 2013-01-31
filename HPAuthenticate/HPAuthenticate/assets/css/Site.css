@@ -784,7 +784,7 @@ td.error ul li {
 	margin-left: 0;
 }
 
-tr.well_meter_table > td {
+tr.well_meter_table > td, tr.user_reporting_row > td {
 	background: #ddd;
 }
 
@@ -795,3 +795,4 @@ tr.well_meter_table > td {
 
 td.miids_cell ul, td.miids_cell li { list-style-type: none; margin: 0; }
  
+.no-squeeze .squeezy { display: none; }

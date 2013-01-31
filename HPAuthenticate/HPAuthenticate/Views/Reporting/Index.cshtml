@@ -102,10 +102,8 @@
 			var isNozzlePackage = readingContainer.isNozzlePackage;
 			var readings = readingContainer.readings;
 			if (typeOf(readings) != 'array' || readings.length < (isNozzlePackage ? 1 : 2)) {
-				//console.debug("Not enough readings in the raw reading array!");
                 _notEnoughReadings.push(true);
 			}
-            console.debug("meterInstallationId:", meterInstallationId);
 			// There are some readings, but maybe not all of them are valid for
 			// calculating volume. (The dates have to fall within particular ranges.)
 			// Happily, the middleware figures this out for us; we just have to
@@ -152,8 +150,6 @@
                 }
                 _hasBeginReading.push(hasBeginReadingThisMeter);
 
-                //console.debug("Has begin reading?: ", hasBeginReadingThisMeter);
-
                 if(!hasBeginReadingThisMeter){
                     throw new Errors.NoBeginReadingException();
                 }
@@ -174,8 +170,6 @@
                     _hasBeginReading = true;
                 }
             }
-
-            //console.debug("Has begin reading?: ", _hasBeginReading);
 
             if(!_hasBeginReading){
                 throw new Errors.NoBeginReadingException();
@@ -428,8 +422,6 @@
                 }
             }
 
-            //console.debug("All meters are having a valid begin reading: ", hasValidBeginReadings)
-            //console.debug("All meters are having enough readings?: ", !_notEnoughReadingsAllMeters)
             ca.notEnoughReadingsForAllMeters = _notEnoughReadingsAllMeters;
 
             if(allowed == false && admin == false)
@@ -908,7 +900,6 @@
 					.data('updateVolume', (function(row) {
 						var cFactor = 1;
 						return function() {
-							console.debug('updating volume for row', row, row.data());
 							// Update the "total volume" column for this row based on current selections
 							var sel = $(row).find('select.user_acceptance');
 
@@ -931,7 +922,7 @@
 								volume = (row.data('calcVol') || { volume: 0 }).volume;
 
 							} else {
-                                contigAcres.userRevisedVolume = true;
+                                cafoObj.userRevisedVolume = true;
 								// Do not accept calculated volume; enter user revised volume
 								cFactor = _unitConversionFactors[row.find('.user_revised_vol_units').val()][2];
 								volume = parseInt(row.find('input.user_revised_vol').val());
@@ -989,7 +980,6 @@
 		// table row holding the reporting section for that CA.
 		function _updateStandardAnnualUsageTitle(caNumber, parentTr) {
 			var h4 = $('h4#annual_usage_title_' + caNumber);
-			console.debug('updating standard title', caNumber, parentTr, h4);
 			if (parentTr.find('td.cafo_response').length > 0) {
 				// CAFOs are present.
 				h4.text('Metered Usage');
@@ -1076,7 +1066,6 @@
 						// If user selected average kWh, treat the well as
 						// an "alternate: electric" meter and use a beginning
 						// reading of 0 and the avg use as the ending reading.
-                        console.debug("This is circumstance 1");
 						var vm = {
 							county: well.county,
 							id: well.id,
@@ -1086,7 +1075,7 @@
 
 						rowVMs.push(vm);
 					}
-				} else {//console.debug("This is NOT circumstance 1");
+				} else {
 					// Build the viewmodel out of meter readings
 					for (var meterInstallationId in contigAcres.meterReadings) {
 						var reading = contigAcres.meterReadings[meterInstallationId];
@@ -1141,6 +1130,10 @@
 					}
 				}
 
+				// Keep track of whether we have any squeeze input in this table,
+				// because if not, we should also hide the header squeeze cell.
+				var hasSqueeze = false;
+
 				for (var vmidx = 0; vmidx < rowVMs.length; vmidx++) {
 					var vm = rowVMs[vmidx];
 
@@ -1149,7 +1142,6 @@
 					var isNozzlePackage = vm.readingContainer.isNozzlePackage;
 
 					var calcVolTd = $('<td></td>').addClass('calc_vol_td');
-                    console.debug("vm", vm);
 					var calcVol = _updateCalculatedVolume(vm.readingContainer, calcVolTd, contigAcres, vm.id);
 
 					var beginReadingTd = $('<td></td>').addClass('begin_reading');
@@ -1176,6 +1168,12 @@
 					calcUnitsDropdown.val(calcVol.unitId);
 
 					var tr = $('<tr></tr>');
+					if (!squeezeInputBox) {
+						// If there wasn't a squeezebox to add here, suppress the cell entirely.
+						tr.addClass("no-squeeze");
+					} else {
+						hasSqueeze = true;
+					}
 					tr.addClass('meter_usage_row')
 						.attr('id', 'au_' + contigAcres.number + '_' + vm.id)
 						.append(
@@ -1249,6 +1247,9 @@
 
 
 				table.append(tbody);
+				if (!hasSqueeze) {
+					table.addClass("no-squeeze");
+				}
 
 				// If there are no meters associated with this CA, show a message to that effect.
 				var hasMeters = tbody.find('tr').length > 0;
@@ -1315,7 +1316,6 @@
 									);	
 				$('body').delegate('table.annual_usage', 'summary_volume_change', (function(summaryTable) {
 					return function(event, caObj) {
-						//console.debug('Fired: summary_volume_change', summaryTable, caObj);
 						// If this summary table is not a child of the CA being updated, return immediately.
 						if (summaryTable.closest('tr.user_reporting_row.caid_' + caObj.number).length === 0) {
 							return;
@@ -1486,7 +1486,6 @@
 								contigAcres.cafos = cafoAr;
 
 
-								console.debug(contigAcres.cafos);
 								// For debugging purposes.								
 								if (config.preventSubmit) { 
 									return false;
@@ -1808,7 +1807,6 @@
 				// Immediately update the text for the above header based on presence
 				// or non-presence of CAFOs.
 				_updateStandardAnnualUsageTitle(caObj.number, wmtTd.closest('tr.user_reporting_row'));
-				console.debug('updating cafo section:', caObj);
 				_updateCafoSection(caObj);
 
 				// Update all calculated volumes now that table is added to dom
@@ -1897,7 +1895,6 @@
 				// Note enclosures so that loops work
 				var clickHandler = (function(caObj, year) {
 					return function() {
-						console.debug('row click', $('#special_circumstance_' + caObj.number));
 						var t = $(this).closest('tr').next('tr.user_reporting_row');
 						if (t.length == 0) {
 							console.log('resetting meter table.');
@@ -1981,7 +1978,6 @@
 												// Update the status indicator, disable the send/cancel buttons
 												// during send
 												var statusEl = $(this).closest('div').find('input,textarea').attr('disabled', 'disabled').end().find('.status').addClass('ajax_loading').text('Sending message...');
-												console.debug(caObj);
 												$.ajax(
 													'Reporting/EmailCAOwner',
 													{
