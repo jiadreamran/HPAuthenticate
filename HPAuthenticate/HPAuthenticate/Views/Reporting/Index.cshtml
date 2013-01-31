@@ -125,6 +125,7 @@
                 }
                 else if(validReadings.length == 1)
                 {
+                	// Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
                     ca.isFakingValidReadings = false;
                     // If the only valid begin reading is the last reading, then the entire reading set is not valid
                     if(validReadings[0].reading == readings[readings.length - 1].reading)
@@ -140,19 +141,6 @@
                     }
                 }
                 readings = validReadings;
-
-                var hasBeginReadingThisMeter = false;
-                // Check if there is a begin reading
-                for(var i = 0; i < readings.length; i++){
-                    if(readings[i].isValidBeginReading){
-                        hasBeginReadingThisMeter = true;
-                    }
-                }
-                _hasBeginReading.push(hasBeginReadingThisMeter);
-
-                if(!hasBeginReadingThisMeter){
-                    throw new Errors.NoBeginReadingException();
-                }
 			}
 
 			// At this point, if we don't have enough readings, throw an exception
@@ -163,15 +151,15 @@
 				throw new Errors.NoReadingsException();
 			}
 
-            _hasBeginReading = false;
+            var hasBeginReading = false;
             // Check if there is a begin reading
             for(var i = 0; i < readings.length; i++){
                 if(readings[i].isValidBeginReading){
-                    _hasBeginReading = true;
+                    hasBeginReading = true;
                 }
             }
 
-            if(!_hasBeginReading){
+            if(!hasBeginReading){
                 throw new Errors.NoBeginReadingException();
             }
 
@@ -223,7 +211,7 @@
 
                 if(readingContainer.isNaturalGas || readingContainer.isElectric) {
                 	// Apply squeeze value.
-                    var squeezeValue = (readingContainer.squeezeValue == null || readingContainer.squeezeValue == 0) ? 0 : readingContainer.squeezeValue;
+                    var squeezeValue = readingContainer.squeezeValue || 0;
 
                     var baseLift = readingContainer.depthToRedbed - 20;
                     var adjLift = baseLift + squeezeValue * 2.3076;
@@ -383,9 +371,6 @@
             return ret;
 		};
 
-        var _isFakingValidReadings = false; // Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
-        var _userRevisedVolume = false; // If the user does not accept the calculated volume, this variable (if true) indiates that he is using his own calculation. When submitting the report, if this value is true, it will not check whether the readings are valid.
-        var _hasBeginReading = [];
         var _miscReportDisable; // Used to disable the submit button when there is an error
         var _notEnoughReadings = [];
         var _notEnoughReadingsAllMeters = false;
@@ -393,23 +378,11 @@
         // Two cases where the submit button will get disabled:
         // 1) One of the meters does not have a valid begin reading
         // 2) It is not reporting period and the user is not an admin
-        function _isSubmitDisabled(ca)
+        function _canSubmit(ca)
         {
             var allowed = reportingSummary.state.isReportingAllowed;
             var admin = reportingSummary.state.adminOverride;
             var ret;
-            //$('#user_revised_vol_units_' + ca.number + '_' + miid)
-            var hasValidBeginReadings = true;
-
-            for(var i = 0; i < _hasBeginReading.length; i++){
-                var hasBeginReadingThisMeter = _hasBeginReading[i];
-                if(!hasBeginReadingThisMeter)
-                {
-                    hasValidBeginReadings = false;
-                    break;
-                }
-            }
-            ca.hasValidBeginReadings = hasValidBeginReadings;
 
             // This is just a part to decide whether the readings are enough for all the meters, it will change _notEnoughtReadingsAllMeters,
             // but it will NOT disable the submit button
@@ -426,8 +399,6 @@
 
             if(allowed == false && admin == false)
                 ret = true;
-            //else if(!hasValidBeginReadings)
-            //    ret = true;
             else
                 ret = false;
 
@@ -563,15 +534,12 @@
 
         function _cleanCAIndicationVariables()
         {
-            _isFakingValidReadings = false; // Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
-            _userRevisedVolume = false; // If the user does not accept the calculated volume, this variable (if true) indiates that he is using his own calculation. When submitting the report, if this value is true, it will not check whether the readings are valid.
-            _hasBeginReading = [];
             _miscReportDisable; // Used to disable the submit button when there is an error
             _notEnoughReadings = [];
             _notEnoughReadingsAllMeters = false;
         };
 
-		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId) {
+		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId) {			
 			var calcVol = null;
             
 			try {
@@ -922,7 +890,7 @@
 								volume = (row.data('calcVol') || { volume: 0 }).volume;
 
 							} else {
-                                cafoObj.userRevisedVolume = true;
+                                caObj.userRevisedVolume = true;
 								// Do not accept calculated volume; enter user revised volume
 								cFactor = _unitConversionFactors[row.find('.user_revised_vol_units').val()][2];
 								volume = parseInt(row.find('input.user_revised_vol').val());
@@ -1112,7 +1080,8 @@
 
 									countyId: reading.countyId,
 									isNozzlePackage: reading.isNozzlePackage,
-									isNaturalGasOrElectric: reading.isNaturalGas || reading.isElectric,
+									isElectric: reading.isElectric,
+									isNaturalGas: reading.isNaturalGas,
 									meterType: reading.meterType,
 									multiplier: reading.meterMultiplier,
 									nonStandardUnits: reading.nonStandardUnits,
@@ -1148,7 +1117,7 @@
 
 					var readingUnitId = vm.unitId;
 
-                    var squeezeInputBox = vm.readingContainer.isNaturalGasOrElectric
+                    var squeezeInputBox = vm.readingContainer.isElectric || vm.readingContainer.isNaturalGas
                     						? _getSqueezeInputBox("squeeze_input_" + contigAcres.number + '_' + vm.id, vm.readingContainer.squeezeValue)
                     						: null;
 
@@ -1214,8 +1183,8 @@
 								if (!td || td.length == 0) {
 									return;
 								}
-
-								var volume = 0;
+								row.data('calcVol', _calculateVolume(vm.readingContainer, ca, miid));
+								var volume; 
 
 								// Check user revised volume - if present and dropdown says so,
 								// use it instead of calculated volume.
@@ -1234,6 +1203,7 @@
 								volume = (Math.round(1000 * (volume * cFactor)) / 1000) || 0;
 
 								td.text(util.round(volume));
+
 
 								td.closest('table').data('updateVolumeSum')();
 
@@ -1456,7 +1426,7 @@
 					).append(
 						$('<p id="submittal_status_' + contigAcres.number + '"></p>').hide()
 					).append(
-						$('<input type="submit"></input>').prop('disabled', _isSubmitDisabled(contigAcres)).val('Submit').click(function() {
+						$('<input type="submit"></input>').prop('disabled', _canSubmit(contigAcres)).val('Submit').click(function() {
 							if (confirm('After submitting, you will no longer be able to edit values for this contiguous area (' + contigAcres.description + '). Are you sure you want to submit?')) {
 
 								// Update CAFO objects prior to submit so that current 
