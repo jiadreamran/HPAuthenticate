@@ -224,13 +224,17 @@ namespace HPAuthenticate.Controllers {
                     // Add depth to redbed if the meter is of 1) natural gas or 2) electric
                     if (container.isNaturalGas || container.isElectric)
                     {
+                        /* //ned skip this lookup until we really need to implement it
                         var service1 = new GisServiceSoapClient();
                         string depthInString = service1.GetDepthToRedbedByMeter(miid);
+                        string depthInString = "Implement this later"
                         double depth = -99999;
+
 
                         if (!Double.TryParse(depthInString, out depth))
                             depth = -99999;
-
+                        */
+                        double depth = 100;  //take this out when the above works
                         container.depthToRedbed = depth;
                     }
 

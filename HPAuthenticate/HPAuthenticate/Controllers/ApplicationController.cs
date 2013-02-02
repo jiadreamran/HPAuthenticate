@@ -21,6 +21,7 @@ namespace HPAuthenticate.Controllers
 			ViewBag.IsAdmin = false;
 			ViewBag.Acting = false;
 			ViewBag.IsReportingDeployed = ConfigurationManager.AppSettings["is_reporting_deployed"].ToBoolean();
+            ViewBag.CommitHash = ConfigurationManager.AppSettings["commit_hash"];
         }
 
 		protected override void OnActionExecuting(ActionExecutingContext filterContext) {
