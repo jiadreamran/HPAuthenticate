@@ -1183,7 +1183,7 @@
 								if (!td || td.length == 0) {
 									return;
 								}
-								row.data('calcVol', _calculateVolume(vm.readingContainer, ca, miid));
+								row.data('calcVol', _updateCalculatedVolume(vm.readingContainer, $(row).find('td.calc_vol_td'), ca, miid));
 								var volume; 
 
 								// Check user revised volume - if present and dropdown says so,
