@@ -1217,8 +1217,10 @@
 
 
 				table.append(tbody);
+				var totalsRowColspan = 9;
 				if (!hasSqueeze) {
 					table.addClass("no-squeeze");
+					totalsRowColspan = 8;
 				}
 
 				// If there are no meters associated with this CA, show a message to that effect.
@@ -1315,14 +1317,14 @@
 						// Update water banking section
 						$('#surplus_tag_' + contigAcres.number).text((surplusTotal >= 0 ? "surplus" : "deficit") + " of " + util.round(Math.abs(surplusTotal)) + " inches");
 						$('#max_bank_' + contigAcres.number).text(util.round(Math.max(surplusTotal, 0)));
-
+						$('#desired_bank_' + contigAcres.number).val(parseInt(Math.max(surplusTotal, 0)));
 					};
 				})(summaryTable));
 
 				table.append(
 					$('<tfoot></tfoot>').append(
 						$('<tr></tr>').append(
-							$('<td colspan="9"></td>').text('Total:')
+							$('<td colspan="' + totalsRowColspan + '"></td>').text('Total:')
 						).append(
 							$('<td></td>').addClass('total_volume_sum').attr('id', 'total_vol_' + contigAcres.number)
 						)
