@@ -94,6 +94,12 @@
             @RenderBody()
         </section>
         <footer>
+            @if (ViewBag.IsAdmin) {
+                <div id="release_version">
+                    Release version:
+                    @Html.Raw("<a href='https://github.com/jiadreamran/HPAuthenticate/commit/" + ViewBag.CommitHash + "'>" + ViewBag.CommitHash + "</a>")
+                 </div>
+                }
 			<a href="http://hpwd.com/home.asp">Home</a> |
 			<a href="http://hpwd.com/about_us.asp">About Us</a> |
 			<a href="http://hpwd.com/the_ogallala.asp">Ogallala</a> |
