@@ -407,6 +407,8 @@ namespace HPAuthenticate.Controllers {
 		// GET: /Reporting/
 		[DeploymentFilter]
 		public ActionResult Index() {
+            ViewBag.IsCafoDeployed = ConfigurationManager.AppSettings["is_cafo_deployed"].ToBoolean();
+            ViewBag.IsEcfDeployed = ConfigurationManager.AppSettings["is_ecf_deployed"].ToBoolean();
 			ViewBag.CurrentUserEmailAddress = ActingUser.Email;
 			if (new ReportingDalc().CanUserOverrideReportingDates(ActualUser.ActingAsUserId ?? ActualUser.Id)) {
 				IsReportingAllowed = true;

@@ -13,7 +13,8 @@
 	console.debug = console.debug || function() {};
 
 	var config = {
-		isCafoDeployed: true
+		isCafoDeployed: /(true|1)/i.test('@ViewBag.IsCafoDeployed'),
+		isEcfDeployed: /(true|1)/i.test('@ViewBag.IsEcfDeployed')
 	};
 
 	var util = (function() {
@@ -209,7 +210,7 @@
             // Now this case can be used for electric, natural gas and third party
 			if (!readingContainer.isNozzlePackage && (readingContainer.isNaturalGas || readingContainer.isElectric || readingContainer.isThirdParty)) {
 
-                if(readingContainer.isNaturalGas || readingContainer.isElectric) {
+                if(config.isEcfDeployed && (readingContainer.isNaturalGas || readingContainer.isElectric)) {
                 	// Apply squeeze value.
                     var squeezeValue = readingContainer.squeezeValue || 0;
 
@@ -222,7 +223,7 @@
 
                 } else {
 				    // Convert meter units as necessary - this will put runningTotal into ac-in.
-				    runningTotal *= (_meterUnitConversionFactors[readingContainer.countyId][nonStandardUnits.toLowerCase()] || 1);
+				    runningTotal *= (_meterUnitConversionFactors[readingContainer.countyId][readingContainer.nonStandardUnits.toLowerCase()] || 1);
 
                 }
 
@@ -587,7 +588,6 @@
 			// HARDCODED: Unit identifier, gallons == 3
 			calcVolTd.data('volume_in_gallons', calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
             calcVolTd.data('running_total', calcVol.runningTotal);
-            calcVolTd.data('depth_to_redbed', readingContainer.depthToRedbed); // Depth to redbed should also be recorded in this td.
 
 			return calcVol;
 		};
@@ -684,7 +684,9 @@
 
 
 		function _getCafoUsageSection(caObj) {
-
+			if (!config.isCafoDeployed) {
+				return false;
+			}
 			/// If the row already exists in the usage table, this function
 			/// just updates the CAFO id/name and livestock count, then it
 			/// recalculates the volume while preserving any user-entered values
@@ -960,6 +962,9 @@
 		// If there is already a CAFO table on the page, this function does nothing
 		// (to avoid wiping out previously-entered data).
 		function _updateCafoSection(caObj) {
+			if (!config.isCafoDeployed) {
+				return false;
+			}
 			var section = $('section#cafo_usage_' + caObj.number);
 			// If the CA has no CAFOs, delete the section and return.
 			if ($('tr.user_reporting_row.caid_' + caObj.number + ' td.cafo_response').length === 0) {
@@ -1117,7 +1122,7 @@
 
 					var readingUnitId = vm.unitId;
 
-                    var squeezeInputBox = vm.readingContainer.isElectric || vm.readingContainer.isNaturalGas
+                    var squeezeInputBox = (config.isEcfDeployed && (vm.readingContainer.isElectric || vm.readingContainer.isNaturalGas))
                     						? _getSqueezeInputBox("squeeze_input_" + contigAcres.number + '_' + vm.id, vm.readingContainer.squeezeValue)
                     						: null;
 
@@ -1435,28 +1440,29 @@
 								// values get included
 								// TODO: Add validation here. First add it server-side, then
 								//		time permitting, add it here for performance.
-								var cafoAr = [];
-								$('tr.cafo-row').each(function() {
-									var cafoObj = $(this).data('cafoObj');
-									// Update the values on the CAFO
-									cafoObj.cafoId = parseInt($(this).find('select.cafoType').val());
-									// If the type was still the default "select one", ignore the row.
-									if (cafoObj.cafoId === -1) {
-										return;
-									}
-									cafoObj.avgLivestock = parseInt($(this).find('input.avgLivestock').val());
-									cafoObj.calculatedVolumeGallons = parseInt($(this).data('calcVol').volume);
-									cafoObj.acceptCalculation = $(this).data('readingContainer').acceptCalculation;
-									cafoObj.userRevisedVolume = parseInt($(this).data('readingContainer').userRevisedVolume);
-									cafoObj.userRevisedVolumeUnitId = parseInt($(this).data('readingContainer').userRevisedVolumeUnitId);
+								if (config.isCafoDeployed) {
+									var cafoAr = [];
+									$('tr.cafo-row').each(function() {
+										var cafoObj = $(this).data('cafoObj');
+										// Update the values on the CAFO
+										cafoObj.cafoId = parseInt($(this).find('select.cafoType').val());
+										// If the type was still the default "select one", ignore the row.
+										if (cafoObj.cafoId === -1) {
+											return;
+										}
+										cafoObj.avgLivestock = parseInt($(this).find('input.avgLivestock').val());
+										cafoObj.calculatedVolumeGallons = parseInt($(this).data('calcVol').volume);
+										cafoObj.acceptCalculation = $(this).data('readingContainer').acceptCalculation;
+										cafoObj.userRevisedVolume = parseInt($(this).data('readingContainer').userRevisedVolume);
+										cafoObj.userRevisedVolumeUnitId = parseInt($(this).data('readingContainer').userRevisedVolumeUnitId);
 
-									cafoAr.push(cafoObj);
-								});
+										cafoAr.push(cafoObj);
+									});
 
-								// Reset the contigAcres CAFO collection to match
-								// what's displayed in the table
-								contigAcres.cafos = cafoAr;
-
+									// Reset the contigAcres CAFO collection to match
+									// what's displayed in the table
+									contigAcres.cafos = cafoAr;
+								}
 
 								// For debugging purposes.								
 								if (config.preventSubmit) { 
