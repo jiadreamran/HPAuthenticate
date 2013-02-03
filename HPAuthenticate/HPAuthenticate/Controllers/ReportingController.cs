@@ -449,6 +449,12 @@ namespace HPAuthenticate.Controllers {
         /// <returns></returns>
 		protected bool ValidateContiguousAcres(JsonContiguousAcres ca, out List<string> errors) {
 			errors = new List<string>();
+            /* MWinckler.20130202: This set of validation is written as CA-specific, but it is
+             * attempting to validate meter-specific conditions. This validation needs to be
+             * rewritten to validate meter readings, and also not rely on calculated boolean
+             * values sent from the (untrustworthy) client. Rely on the actual submitted meter
+             * readings and user inputs - we have them all here.
+
             if (ca.isFakingValidReadings)
             {
                 if(!ca.userRevisedVolume)
@@ -464,6 +470,7 @@ namespace HPAuthenticate.Controllers {
                 if (!ca.userRevisedVolume)
                     errors.Add("One of the meters does not have valid begin readings for volume calculation.");
             }
+             */
 			// Ensure the CA actually exists in the database.
 			if (!new GisDalc().ContiguousAcresExists(ca.number)) {
 				errors.Add("The specified contiguous area (ID: " + ca.number + ") does not exist.");

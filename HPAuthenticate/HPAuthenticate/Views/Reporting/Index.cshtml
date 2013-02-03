@@ -47,7 +47,8 @@
 					volume: 0,
 					unitId: 3, // HARDCODED: Unit identifier, gallons == 3
                     runningTotal: 0, // Meng: runningTotal in inputed unit for each meter
-					rolloverOccurred: false
+					rolloverOccurred: false,
+					fakedEndReading: false
 				}),
 				MeterReading: Class.extend({
 					init: function(reading, rate, unitId) {
@@ -103,8 +104,12 @@
 			var isNozzlePackage = readingContainer.isNozzlePackage;
 			var readings = readingContainer.readings;
 			if (typeOf(readings) != 'array' || readings.length < (isNozzlePackage ? 1 : 2)) {
-                _notEnoughReadings.push(true);
+                throw new Errors.NoReadingsException('There are not enough readings on this meter to calculate a volume.');
 			}
+
+			// The CalculatedVolume object we will be returning.
+			var ret = new Classes.CalculatedVolume();
+
 			// There are some readings, but maybe not all of them are valid for
 			// calculating volume. (The dates have to fall within particular ranges.)
 			// Happily, the middleware figures this out for us; we just have to
@@ -126,8 +131,11 @@
                 }
                 else if(validReadings.length == 1)
                 {
+                	/* MWinckler.20130202: This is written for the CA level, but this is the
+                		meter level - this 
                 	// Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
                     ca.isFakingValidReadings = false;
+                    */
                     // If the only valid begin reading is the last reading, then the entire reading set is not valid
                     if(validReadings[0].reading == readings[readings.length - 1].reading)
                     {
@@ -137,7 +145,7 @@
                     {
                         // Use the last reading as the valid end reading
                         //throw new Errors.NoReadingsException();
-                        ca.isFakingValidReadings = true;
+                        ret.fakedEndReading = true;
                         validReadings.push(readings[readings.length - 1]);
                     }
                 }
@@ -148,7 +156,6 @@
 			// and warn the user.
             var notEnoughReadings = false;
 			if (readings.length < (isNozzlePackage ? 1 : 2)) {
-                _notEnoughReadings.push(true);
 				throw new Errors.NoReadingsException();
 			}
 
@@ -173,7 +180,6 @@
 			var rolloverValue = readingContainer.rolloverValue || 0;
 			var i = 1;
 			var delta = 0;
-			var ret = new Classes.CalculatedVolume();
 			if (isNozzlePackage) {
 				// HARDCODED: Convert GPH to GPM by *60
 				runningTotal = prevReading.reading * prevReading.rate * 60;
@@ -372,9 +378,6 @@
             return ret;
 		};
 
-        var _miscReportDisable; // Used to disable the submit button when there is an error
-        var _notEnoughReadings = [];
-        var _notEnoughReadingsAllMeters = false;
         
         // Two cases where the submit button will get disabled:
         // 1) One of the meters does not have a valid begin reading
@@ -384,19 +387,6 @@
             var allowed = reportingSummary.state.isReportingAllowed;
             var admin = reportingSummary.state.adminOverride;
             var ret;
-
-            // This is just a part to decide whether the readings are enough for all the meters, it will change _notEnoughtReadingsAllMeters,
-            // but it will NOT disable the submit button
-            for(var i = 0; i < _notEnoughReadings.length; i++){
-                var notEnoughReadingsThisMeter = _notEnoughReadings[i];
-                if(notEnoughReadingsThisMeter)
-                {
-                    _notEnoughReadingsAllMeters = true;
-                    break;
-                }
-            }
-
-            ca.notEnoughReadingsForAllMeters = _notEnoughReadingsAllMeters;
 
             if(allowed == false && admin == false)
                 ret = true;
@@ -533,30 +523,32 @@
 
 		};
 
-        function _cleanCAIndicationVariables()
-        {
-            _miscReportDisable; // Used to disable the submit button when there is an error
-            _notEnoughReadings = [];
-            _notEnoughReadingsAllMeters = false;
-        };
-
 		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId) {			
 			var calcVol = null;
+
+			function setCalcVolTdError(msg) {
+				// Present a warning icon to the user
+				calcVolTd.addClass('warning');
+				calcVolTd.attr('title', msg);
+				$(calcVolTd).ready(function() {
+					$(calcVolTd).tipsy({ gravity: 's'});
+				});
+			}
             
 			try {
-				// _REVIEW: Merge result; may be incorrect place to call this
-                _cleanCAIndicationVariables();
 				calcVol = _calculateVolume(readingContainer, ca, meterInstallationId);
 				calcVolTd.text(util.round(calcVol.volume));
 				if (calcVol.rolloverOccurred) {
-					// Present a warning icon to the user
-					calcVolTd.addClass('warning');
-					calcVolTd.attr('title', 'It appears a meter rollover occurred; calculated volume is based on an assumed rollover value of '
-											+ readingContainer.rolloverValue + ' for this meter.');
-					$(calcVolTd).ready(function() {
-						$(calcVolTd).tipsy({ gravity: 's'});
-					});
-				}					
+					setCalcVolTdError('It appears a meter rollover occurred; calculated volume is based on an assumed rollover value of '+ readingContainer.rolloverValue + ' for this meter.');
+				}
+				if (calcVol.fakedEndReading) {
+					// There wasn't a valid end reading, so we faked one to
+					// show approximate volume. The user won't be able to submit
+					// this CA without overriding this calculated value with a
+					// user-entered volume.
+					setCalcVolTdError('This meter did not have a valid end reading; the calculated volume is estimated based on other readings and must be overridden with a user-revised volume before submittal.');
+
+				}				
 			} catch (e) {
 				calcVol = new Classes.CalculatedVolume();
 				if (e.name == 'NoReadingsException') {
@@ -989,11 +981,6 @@
 				// resetWellMeterTable function - it looks at the circumstance and calls
 				// the CAFO function appropriately.
 
-				//*****************************************************************************************************************
-                // Here is my logic to clean the CA-specific indication variables (all have begin readings, enough readings, etc.)
-                //*****************************************************************************************************************
-                _cleanCAIndicationVariables();
-
 				// Note: store a reference to contigAcres on this reporting container so that
 				// child elements can update properties as necessary (i.e. user reported volume, etc.)
 				var container = $('<div></div>').addClass('reporting_container').data('contigAcres', contigAcres);
@@ -1079,9 +1066,8 @@
 									userRevisedVolume: readingC.userRevisedVolume,
 									userRevisedVolumeUnitId: readingC.userRevisedVolumeUnitId,
 
-									// _REVIEW: Merge: Ensure these are correctly populated
 									depthToRedbed: readingC.depthToRedbed,
-									squeezeValue: reading.squeezeValue,
+									squeezeValue: readingC.squeezeValue,
 
 									countyId: reading.countyId,
 									isNozzlePackage: reading.isNozzlePackage,

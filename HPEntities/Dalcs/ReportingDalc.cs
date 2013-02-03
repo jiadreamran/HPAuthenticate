@@ -229,6 +229,7 @@ merge ReportedCafoUsage as target
 using (
 	select
 		@cafoUsageId as cafoUsageId,
+        @caId as caId,
 		@operatingYear as operatingYear,
 		@cafoOperationId as cafoOperationId,
 		@avgLivestock as avgLivestock,
@@ -241,18 +242,21 @@ when matched then
 	update set
 		CafoOperationId = source.cafoOperationId,
 		OperatingYear = source.operatingYear,
+        ContiguousAcresId = source.caId,
 		AvgLivestockPerDay = source.avgLivestock,
 		CalculatedVolumeGallons = source.calcVolGals,
 		UserRevisedVolumeGallons = source.userRevisedVolGals
 when not matched then
 	insert (
 		OperatingYear,
+        ContiguousAcresId,
 		CafoOperationId,
 		AvgLivestockPerDay,
 		CalculatedVolumeGallons,
 		UserRevisedVolumeGallons
 	) values (
 		source.operatingYear,
+        source.caId,
 		source.cafoOperationId,
 		source.avgLivestock,
 		source.calcVolGals,
@@ -260,6 +264,7 @@ when not matched then
 	);", 
 								new Param("@cafoUsageId", cafo.id > -1 ? cafo.id : (object)DBNull.Value),
 								new Param("@operatingYear", ca.year),
+                                new Param("@caId", ca.number),
 								new Param("@cafoOperationId", cafo.cafoId),
 								new Param("@avgLivestock", cafo.avgLivestock),
 								new Param("@calcVolGals", cafo.calculatedVolumeGallons),
@@ -484,7 +489,12 @@ where
 delete from ReportedMeterVolumes
 where
 	OperatingYear = @year
-	and ContiguousAcresId = @id;", new Param("@year", year),
+	and ContiguousAcresId = @id;
+
+delete from ReportedCafoUsage
+where
+    OperatingYear = @year
+    and ContiguousAcresId = @id;", new Param("@year", year),
                      new Param("@id", caId));
 
 		}
