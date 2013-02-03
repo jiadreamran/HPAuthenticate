@@ -218,6 +218,7 @@
     <Content Include="App_Code\UserHelpers.cshtml" />
     <None Include="assets\images\help\QuickReference_v0.pdf" />
     <None Include="assets\QuickReference.pdf" />
+    <Content Include="commit.config" />
     <None Include="Properties\DataSources\HPAuthWcf.Entities.User.datasource" />
     <Content Include="assets\js\swfobject.js" />
     <Content Include="Models\readme.txt" />
@@ -266,7 +267,6 @@
     <Content Include="Views\Admin\ManageAccounts.cshtml" />
     <Content Include="Views\Reporting\Index.cshtml" />
     <Content Include="Views\Admin\ManageUsageReports.cshtml" />
-    <Content Include="Views\Reporting\AlternateIndex.cshtml" />
     <Content Include="Views\Errors\General.cshtml" />
   </ItemGroup>
   <ItemGroup>

@@ -421,24 +421,6 @@ namespace HPAuthenticate.Controllers {
 			});
 		}
 
-
-		public ActionResult AlternateIndex() {
-			if (new ReportingDalc().CanUserOverrideReportingDates(ActualUser.ActingAsUserId ?? ActualUser.Id)) {
-				IsReportingAllowed = true;
-			}
-			// For this alternate bizarro-world page, require a special code
-			int code = DateTime.Now.Year + DateTime.Now.Month + DateTime.Now.Day;
-			if (Request["code"] != code.ToString()) {
-				return RedirectToAction("Index");
-			}
-			var cdalc = new ConfigDalc();
-			return View(new ReportingViewModel() {
-				meterUnitConversionFactors = JObject.FromObject(cdalc.GetAllMeterUnitConversionFactors()).ToString(),
-				unitConversionFactors = JObject.FromObject(cdalc.GetAllUnitConversionFactors()).ToString(),
-				pageState = JObject.FromObject(GetPageStateJson(ActingUser)).ToString()
-			});
-		}
-
 		#region Validation support
 
         /// <summary>
