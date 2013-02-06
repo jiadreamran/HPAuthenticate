@@ -50,7 +50,7 @@
 		$('#act_as_name').autocomplete({
 			source: function (request, response) {
 				$.ajax(
-					"@Url.Action("FindAllClients", "User")",
+					"@Url.Action("FindClientsByNameOrEmail", "User")",
 					{
 						type: "POST",
 						data: {

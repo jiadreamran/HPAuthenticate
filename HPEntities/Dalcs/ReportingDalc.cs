@@ -8,8 +8,14 @@ using HPEntities.Entities;
 using HPEntities.Entities.JsonClasses;
 using System.Data;
 using HPEntities.Helpers;
+using System.Configuration;
+using Newtonsoft.Json;
 namespace HPEntities.Dalcs {
 	public class ReportingDalc : AuthDalcBase {
+
+        private static string dbTableSuffix = !string.IsNullOrEmpty(ConfigurationManager.AppSettings["gis_table_suffix"])
+                                        ? System.Text.RegularExpressions.Regex.Replace(ConfigurationManager.AppSettings["gis_table_suffix"], "[^A-Za-z_0-9]", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                                        : "";
 
 		/// <summary>
 		/// Retrieves a reporting summary object from the database for the specified user.
@@ -223,6 +229,7 @@ merge ReportedCafoUsage as target
 using (
 	select
 		@cafoUsageId as cafoUsageId,
+        @caId as caId,
 		@operatingYear as operatingYear,
 		@cafoOperationId as cafoOperationId,
 		@avgLivestock as avgLivestock,
@@ -235,18 +242,21 @@ when matched then
 	update set
 		CafoOperationId = source.cafoOperationId,
 		OperatingYear = source.operatingYear,
+        ContiguousAcresId = source.caId,
 		AvgLivestockPerDay = source.avgLivestock,
 		CalculatedVolumeGallons = source.calcVolGals,
 		UserRevisedVolumeGallons = source.userRevisedVolGals
 when not matched then
 	insert (
 		OperatingYear,
+        ContiguousAcresId,
 		CafoOperationId,
 		AvgLivestockPerDay,
 		CalculatedVolumeGallons,
 		UserRevisedVolumeGallons
 	) values (
 		source.operatingYear,
+        source.caId,
 		source.cafoOperationId,
 		source.avgLivestock,
 		source.calcVolGals,
@@ -254,6 +264,7 @@ when not matched then
 	);", 
 								new Param("@cafoUsageId", cafo.id > -1 ? cafo.id : (object)DBNull.Value),
 								new Param("@operatingYear", ca.year),
+                                new Param("@caId", ca.number),
 								new Param("@cafoOperationId", cafo.cafoId),
 								new Param("@avgLivestock", cafo.avgLivestock),
 								new Param("@calcVolGals", cafo.calculatedVolumeGallons),
@@ -370,7 +381,7 @@ select
 	ca.description,
 	bw.OperatingYear
 from Clients c
-inner join HPWD_GIS.dbo.hp_contiguous_acres ca
+inner join HPWD_GIS.dbo.hp_contiguous_acres" + dbTableSuffix + @" ca
 	on ca.actingID = c.ClientID
 left join BankedWater bw
 	on bw.ContiguousAcresId = ca.caId
@@ -417,7 +428,59 @@ order by LastNameOrCompany asc;", new Param("@term", Config.Instance.FormatStrin
 		/// <param name="year"></param>
 		/// <param name="caId"></param>
 		public void UnsubmitCA(int year, int caId) {
-			ExecuteNonQuery(@"
+            // Get user ID we're dealing with, in order to properly
+            // delete the user's JSON summary state below
+            var userId = ExecuteScalar(@"
+select ActingUserId 
+from BankedWater 
+where 
+    OperatingYear = @year
+    and ContiguousAcresId = @id;", new Param("@year", year),
+                                 new Param("@id", caId)).ToInteger();
+
+            if (userId > 0) {
+                // Attempt to clean up the user's JSON
+                var rsJson = GetReportingSummary(userId);
+                ReportingSummary rs;
+                try {
+                    rs = JsonConvert.DeserializeObject<ReportingSummary>(rsJson);
+                    JsonReportingYear jsonYear;
+                    if (rs != null && rs.years.TryGetValue(year, out jsonYear)) {
+                        // Find and delete the offending CA.
+                        var index = jsonYear.contiguousAcres.FindIndex(ca => ca.number == caId);
+                        if (index > -1) {
+                            // Delete any ReportingErrorResponses for this CA.
+                            foreach (var kv in jsonYear.contiguousAcres[index].meterInstallationErrors) {
+                                // Key: meter installation ID.
+                                ExecuteNonQuery(@"
+delete from ReportingErrorResponses
+where
+    MeterInstallationId = @miid
+    and ActingUserId = @userId;", new Param("@miid", kv.Key), new Param("@userId", userId));
+                            }
+
+                            foreach (var well in jsonYear.contiguousAcres[index].wells) {
+                                ExecuteNonQuery(@"
+delete from ReportingErrorResponses
+where
+    WellID = @wellId
+    and ActingUserId = @userId;", new Param("@wellId", well.id), new Param("@userId", userId));
+                            }
+
+                            // Remove the CA from serialized JSON and save the revised JSON to the db.
+                            jsonYear.contiguousAcres.RemoveAt(index);
+                            SaveReportingSummary(new UserDalc().GetUser(userId),
+                                                JsonConvert.SerializeObject(rs),
+                                                false);
+                        }
+                    }
+                } catch (Exception ex) {
+                    // We tried, we failed. Give up.
+                }
+
+            }
+
+            ExecuteNonQuery(@"
 delete from BankedWater
 where
 	OperatingYear = @year
@@ -426,8 +489,14 @@ where
 delete from ReportedMeterVolumes
 where
 	OperatingYear = @year
-	and ContiguousAcresId = @id;", new Param("@year", year),
-								 new Param("@id", caId));
+	and ContiguousAcresId = @id;
+
+delete from ReportedCafoUsage
+where
+    OperatingYear = @year
+    and ContiguousAcresId = @id;", new Param("@year", year),
+                     new Param("@id", caId));
+
 		}
 
 		public bool IsWellErrorResponseRecorded(int wellId, int userId) {

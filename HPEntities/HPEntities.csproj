@@ -34,6 +34,10 @@
     <Reference Include="libMatt">
       <HintPath>..\..\libMatt\libMatt\bin\Release\libMatt.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\HPAuthenticate\HPAuthenticate\bin\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations">
       <Private>True</Private>

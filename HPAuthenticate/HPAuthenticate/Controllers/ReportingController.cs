@@ -155,7 +155,13 @@ namespace HPAuthenticate.Controllers {
 			if (contigAcres.Count() > 0) { // Only create the service if contigAcres has stuff, because SOAP takes time
 				var service = new GisServiceSoapClient();
 				foreach (var ca in contigAcres) {
-					string result = service.GetWellIDsByCA(ca.OBJECTID);
+                    string result = "";
+                    // This call is prone to failure whenever the GIS service is down.
+                    try {
+                        result = service.GetWellIDsByCA(ca.OBJECTID);
+                    } catch (Exception ex) {
+                        pageState.loadErrors.Add("Unable to load well associations for any CAs: the GIS service appears to be down!");
+                    }
 					try {
 						int[] ids = JsonConvert.DeserializeObject<int[]>(result.Trim('{', '}'));
 						wellIds[ca.caID] = new HashSet<int>(ids);
@@ -218,13 +224,17 @@ namespace HPAuthenticate.Controllers {
                     // Add depth to redbed if the meter is of 1) natural gas or 2) electric
                     if (container.isNaturalGas || container.isElectric)
                     {
+                        /* //ned skip this lookup until we really need to implement it
                         var service1 = new GisServiceSoapClient();
                         string depthInString = service1.GetDepthToRedbedByMeter(miid);
+                        string depthInString = "Implement this later"
                         double depth = -99999;
+
 
                         if (!Double.TryParse(depthInString, out depth))
                             depth = -99999;
-
+                        */
+                        double depth = 100;  //take this out when the above works
                         container.depthToRedbed = depth;
                     }
 
@@ -267,43 +277,7 @@ namespace HPAuthenticate.Controllers {
 				List<JsonContiguousAcres> removals = year.contiguousAcres.Where(ca => !ca.isSubmitted).ToList();
 				HashSet<int> submittedCaIds = new HashSet<int>(year.contiguousAcres.Where(ca => ca.isSubmitted).Select(x => x.number));
 				
-				/*
-				foreach (var ca in year.contiguousAcres) {
-					// * Submittal status - if any of the following are true, this CA is submitted:
-					//		- There's a record in ReportedMeterVolumes
-					//		- There's a record in BankedWater
-					ca.isSubmitted = rptgDalc.IsSubmitted(ca.number, CurrentReportingYear);
-					// Update historical banked water table
-					ca.bankedWaterHistory = getBankedWaterTable(ca.number);
 
-					// If the CA is for this reporting year, update the banked water carryover variable
-					JsonBankedWaterRecord bankedWaterLastYear;
-					ca.annualUsageSummary.bankedWaterFromPreviousYear = ca.bankedWaterHistory.TryGetValue(CurrentReportingYear - 1, out bankedWaterLastYear) ? bankedWaterLastYear.bankedInches : 0;
-
-					if (ca.isSubmitted) {
-						// Frozen - no further updates possible.
-						continue;
-					}
-
-					ca.annualUsageSummary.allowableApplicationRate = rptgDalc.GetAllowableProductionRate(CurrentReportingYear);
-
-					// Reload wells in every case; this is summary info/error responses built from db
-					HashSet<int> wids;
-					if (wellIds.TryGetValue(ca.number, out wids)) {
-						ca.wells = new WellDalc().GetWells(wids.ToArray()).Select(x => new JsonWell(x)).ToArray();
-					} else {
-						ca.wells = new JsonWell[] { };
-					}
-					// We also need to add any wells that are associated with meters associated with these wells.
-					// :S
-
-					if (!validAcres.ContainsKey(ca.number)) {
-						removals.Add(ca);
-					}
-
-
-				}
-				 */
 				// Ensure that all the CAs are still applicable to this account - the CA IDs need
 				// to match what's presently associated with the user account, else they're removed.
 				foreach (var ca in removals) {
@@ -374,6 +348,12 @@ namespace HPAuthenticate.Controllers {
 			// Go through and check all the submittal states of the CAs
 			foreach (var ca in pageState.years[CurrentReportingYear].contiguousAcres) {
 				ca.isSubmitted = rptgDalc.IsSubmitted(ca.number, CurrentReportingYear);
+                if (ca.isSubmitted) {
+                    // If it was a submitted CA, the banked water history table
+                    // still needs to be loaded because it wasn't set above.
+                    ca.bankedWaterHistory = getBankedWaterTable(ca.number);
+                }
+
 			}
 
 			return pageState;
@@ -427,6 +407,8 @@ namespace HPAuthenticate.Controllers {
 		// GET: /Reporting/
 		[DeploymentFilter]
 		public ActionResult Index() {
+            ViewBag.IsCafoDeployed = ConfigurationManager.AppSettings["is_cafo_deployed"].ToBoolean();
+            ViewBag.IsEcfDeployed = ConfigurationManager.AppSettings["is_ecf_deployed"].ToBoolean();
 			ViewBag.CurrentUserEmailAddress = ActingUser.Email;
 			if (new ReportingDalc().CanUserOverrideReportingDates(ActualUser.ActingAsUserId ?? ActualUser.Id)) {
 				IsReportingAllowed = true;
@@ -439,28 +421,22 @@ namespace HPAuthenticate.Controllers {
 			});
 		}
 
-
-		public ActionResult AlternateIndex() {
-			if (new ReportingDalc().CanUserOverrideReportingDates(ActualUser.ActingAsUserId ?? ActualUser.Id)) {
-				IsReportingAllowed = true;
-			}
-			// For this alternate bizarro-world page, require a special code
-			int code = DateTime.Now.Year + DateTime.Now.Month + DateTime.Now.Day;
-			if (Request["code"] != code.ToString()) {
-				return RedirectToAction("Index");
-			}
-			var cdalc = new ConfigDalc();
-			return View(new ReportingViewModel() {
-				meterUnitConversionFactors = JObject.FromObject(cdalc.GetAllMeterUnitConversionFactors()).ToString(),
-				unitConversionFactors = JObject.FromObject(cdalc.GetAllUnitConversionFactors()).ToString(),
-				pageState = JObject.FromObject(GetPageStateJson(ActingUser)).ToString()
-			});
-		}
-
 		#region Validation support
 
+        /// <summary>
+        /// Validates CA for usage submittal. Assumes current reporting year.
+        /// </summary>
+        /// <param name="ca"></param>
+        /// <param name="errors"></param>
+        /// <returns></returns>
 		protected bool ValidateContiguousAcres(JsonContiguousAcres ca, out List<string> errors) {
 			errors = new List<string>();
+            /* MWinckler.20130202: This set of validation is written as CA-specific, but it is
+             * attempting to validate meter-specific conditions. This validation needs to be
+             * rewritten to validate meter readings, and also not rely on calculated boolean
+             * values sent from the (untrustworthy) client. Rely on the actual submitted meter
+             * readings and user inputs - we have them all here.
+
             if (ca.isFakingValidReadings)
             {
                 if(!ca.userRevisedVolume)
@@ -476,6 +452,7 @@ namespace HPAuthenticate.Controllers {
                 if (!ca.userRevisedVolume)
                     errors.Add("One of the meters does not have valid begin readings for volume calculation.");
             }
+             */
 			// Ensure the CA actually exists in the database.
 			if (!new GisDalc().ContiguousAcresExists(ca.number)) {
 				errors.Add("The specified contiguous area (ID: " + ca.number + ") does not exist.");
@@ -518,7 +495,15 @@ namespace HPAuthenticate.Controllers {
 					errors.Add("Desired water bank value cannot be negative.");
 				}
 
+                // Retrieve allowable application rate for this year
+                // It's also on the submitted CA JSON, but we cannot 
+                // trust the client here!
 				var rdalc = new ReportingDalc();
+                var allowableRate = rdalc.GetAllowableProductionRate(CurrentReportingYear);
+                if (ca.annualUsageSummary.desiredBankInches > allowableRate) {
+                    errors.Add(string.Format("You cannot bank more than {0} inches for this reporting year.", allowableRate));
+                }
+
 				// Check all associated wells
 				foreach (var well in ca.wells) {
 					if (well.meterInstallationIds.Length == 0) {

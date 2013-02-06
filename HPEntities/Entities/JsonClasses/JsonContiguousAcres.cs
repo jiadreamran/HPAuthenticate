@@ -27,10 +27,7 @@ namespace HPEntities.Entities.JsonClasses {
 		public bool isSubmitted { get; set; }
 		public int number { get; set; }
 		public string description { get; set; }
-        public bool isFakingValidReadings { get; set; }
         public bool userRevisedVolume { get; set; }
-        public bool notEnoughReadingsForAllMeters { get; set; }
-        public bool hasValidBeginReadings { get; set; }
 		public JsonWell[] wells { get; set; }
 
 		public Dictionary<int, JsonErrorCondition> meterInstallationErrors { get; set; }

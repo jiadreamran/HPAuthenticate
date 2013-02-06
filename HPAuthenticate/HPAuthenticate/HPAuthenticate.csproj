@@ -34,20 +34,21 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EntityFramework">
-      <HintPath>..\packages\EntityFramework.4.1.10331.0\lib\EntityFramework.dll</HintPath>
-    </Reference>
     <Reference Include="libMatt, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\libMatt\libMatt\bin\Release\libMatt.dll</HintPath>
+      <HintPath>bin\libMatt.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\..\downloads\software\json.net\Json45r7\Bin\Net40\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System.Data.Entity" />
     <Reference Include="System.Runtime.Serialization" />
@@ -217,6 +218,7 @@
     <Content Include="App_Code\UserHelpers.cshtml" />
     <None Include="assets\images\help\QuickReference_v0.pdf" />
     <None Include="assets\QuickReference.pdf" />
+    <Content Include="commit.config" />
     <None Include="Properties\DataSources\HPAuthWcf.Entities.User.datasource" />
     <Content Include="assets\js\swfobject.js" />
     <Content Include="Models\readme.txt" />
@@ -265,7 +267,6 @@
     <Content Include="Views\Admin\ManageAccounts.cshtml" />
     <Content Include="Views\Reporting\Index.cshtml" />
     <Content Include="Views\Admin\ManageUsageReports.cshtml" />
-    <Content Include="Views\Reporting\AlternateIndex.cshtml" />
     <Content Include="Views\Errors\General.cshtml" />
   </ItemGroup>
   <ItemGroup>
@@ -313,4 +314,7 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
+  <PropertyGroup>
+    <PostBuildEvent>$(SolutionDir)scripts\update_commit_hash.bat &gt; $(ProjectDir)commit.config</PostBuildEvent>
+  </PropertyGroup>
 </Project>

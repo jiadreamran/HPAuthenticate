@@ -33,10 +33,6 @@ namespace HPEntities.Dalcs {
 			if (user == null) {
 				throw new ArgumentNullException("user");
 			}
-			if (!didUserAcceptDisclaimer && (role == PropertyRole.authorized_producer || role == PropertyRole.installer)) {
-				// Invalid - either of these two roles must accept disclaimers.
-				throw new ValidationException("To act as a " + role.Description() + " you must accept the disclaimer.");
-			}
 
 			ExecuteNonQuery(@"
 merge ClientProperties as target

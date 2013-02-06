@@ -18,15 +18,6 @@
 @using (Html.BeginForm(ViewContext.Controller.ValueProvider.GetValue("action").RawValue.ToString(), ViewContext.Controller.ValueProvider.GetValue("controller").RawValue.ToString(), FormMethod.Post, new { autocomplete = "off" })) {
 	@Html.ValidationSummary(true, "Unable to add property; please correct the errors and try again.")
 
-	<dl class='form'>
-		<dt></dt>
-		<dd>
-			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.owner, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.owner, new { id = "radOwner" }) Owner (only)</label><br>
-			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.installer, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.installer, new { id = "radInstaller" }) Water Meter Installer (only)</label><br />
-			<label>@Html.RadioButton("PropertyRole", (int)HPEntities.Entities.Enums.PropertyRole.authorized_producer, Model.PropertyRole == HPEntities.Entities.Enums.PropertyRole.authorized_producer, new { id = "radTenant" }) Operator (a legally authorized representative of the "owner" such as a tenant or farm manager)</label>
-		</dd>
-	</dl>
-
 	<div id='agent_form'>
 	<dl class="form">
 		<dt>
@@ -117,56 +108,12 @@
 	</dl>
 
 
-		<dl class='form' data-disclaimer-role="installer">
-			<dt></dt>
-			<dd>
-				I, @Model.CurrentUserDisplayName, do hereby
-				certify and promise that the meter installed has been accurately reported
-				as to meter location, meter type and vendor, meter serial number, and
-				other related information requested.  Further, I certify that the "owner"
-				or if applicable the "operator" of the property described herein has
-				formally and specifically authorized this installation on the property
-				described.  THIS IS A METER INSTALLATION ONLY and does not authorize
-				further and ongoing actions on behalf of the "owner" or "operator" such
-				as production reporting.  Such production reporting after the installation
-				is the sole responsibility of the "owner" or "operator" or an appropriate
-				designated party specifically authorized to report water production and
-				use.
-			</dd>
-		</dl>
-
-		<dl class='form' data-disclaimer-role="tenant,owner" data-allowed-roles="tenant,owner">
-			<dt></dt>
-			<dd>
-				@Html.ValidationMessageFor(m => m.ProductionTypes) <br/ >
-				I, @Model.CurrentUserDisplayName, am legally authorized to produce and accurately report
-				groundwater use to  High Plains Underground Water Conservation District for
-				the following use:
-				<strong>
-					<label class='nobreak'>@Html.CheckBoxFor(m => m.ProductionTypeAgriculture)&nbsp;agriculture</label> / 
-					<label class='nobreak'>@Html.CheckBoxFor(m => m.ProductionTypeMineralProduction)&nbsp;mineral&nbsp;production</label> /
-					<label class='nobreak'>@Html.CheckBoxFor(m => m.ProductionTypeIndustrial)&nbsp;industrial/commercial</label>
-				</strong>
-				By entering this information and pushing the "Create Account" button, I am warranting and
-				certifying that I have formally and specifically been designated the legally  
-				authorized representative to produce and report this consumption/use to the
-				High Plains Underground Water Conservation District.
-			</dd>	
-
-		</dl>
-
-
 		@* In this case the authorized producer name is always the same, so on load set it. *@
 		<script type='text/javascript'>
 			// Checks the selected property role and shows/hides/disables form elements appropriately
 			function updateForm() {
-				// Map the selected role to a known string for the purposes of enabling/disabling form elements.
-				var roles = {};
-				roles[parseInt($('#radOwner').val())] = "owner";
-				roles[parseInt($('#radInstaller').val())] = "installer";
-				roles[parseInt($('#radTenant').val())] = "tenant";
 
-				var selectedRole = roles[parseInt($('input[name="PropertyRole"]:checked').val())];
+				var selectedRole = "tenant"; // Hardcoded as of 2013.01.24.
 
 				// Disable all controls except those having the currently-selected role
 				$('input[data-allowed-roles], select[data-allowed-roles]').each(function(i, el) {

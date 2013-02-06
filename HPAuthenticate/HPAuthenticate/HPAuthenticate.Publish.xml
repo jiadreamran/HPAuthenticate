@@ -1,12 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <publishData>
-  <publishProfile publishUrl="C:\Users\mjia\Desktop\Projects\HPWD_Development\HPAuthenticate_Development\deploy" deleteExistingFiles="True" ftpAnonymousLogin="False" ftpPassiveMode="True" msdeploySite="" msdeploySiteID="" msdeployRemoteSitePhysicalPath="" msdeployAllowUntrustedCertificate="False" msdeploySkipExtraFilesOnServer="True" msdeployMarkAsApp="False" profileName="Profile1" publishMethod="FileSystem" replaceMatchingFiles="False" userName="" savePWD="False" userPWD="" SelectedForPublish="True">
+  <publishProfile publishUrl="c:\projects\hp_deploy" deleteExistingFiles="True" ftpAnonymousLogin="False" ftpPassiveMode="True" msdeploySite="" msdeploySiteID="" msdeployRemoteSitePhysicalPath="" msdeployAllowUntrustedCertificate="False" msdeploySkipExtraFilesOnServer="True" msdeployMarkAsApp="False" profileName="Profile1" publishMethod="FileSystem" replaceMatchingFiles="False" userName="" savePWD="False" userPWD="" SelectedForPublish="True">
     <file relUrl="bin/System.Web.WebPages.dll" publishTime="01/05/2011 15:45:38" />
-    <file relUrl="Views/User/Index.cshtml" publishTime="10/18/2011 11:50:46" />
+    <file relUrl="Views/User/Index.cshtml" publishTime="01/10/2013 19:31:29" />
     <file relUrl="bin/System.Web.Helpers.xml" publishTime="12/19/2010 23:59:38" />
-    <file relUrl="App_Code/Flash.cshtml" publishTime="10/18/2011 11:50:44" />
-    <file relUrl="assets/js/MicrosoftMvcValidation.js" publishTime="12/15/2011 11:33:32" />
+    <file relUrl="App_Code/Flash.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/js/MicrosoftMvcValidation.js" publishTime="01/10/2013 19:31:30" />
     <file relUrl="bin/Microsoft.Web.Infrastructure.xml" publishTime="12/20/2010 10:52:36" />
+<<<<<<< HEAD
     <file relUrl="assets/css/themes/base/jquery.ui.slider.css" publishTime="12/15/2011 11:33:32" />
     <file relUrl="bin/Microsoft.Web.Infrastructure.dll" publishTime="01/05/2011 15:45:38" />
     <file relUrl="assets/css/themes/base/jquery.ui.resizable.css" publishTime="12/15/2011 11:33:32" />
@@ -17,32 +18,46 @@
     <file relUrl="Views/Shared/_LoginForm.cshtml" publishTime="11/14/2011 10:35:48" />
     <file relUrl="assets/css/Site.css" publishTime="11/14/2012 15:45:32" />
     <file relUrl="Views/Shared/_PhoneNumberForm.cshtml" publishTime="12/15/2011 11:33:32" />
+=======
+    <file relUrl="Models/readme.txt" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/themes/base/jquery.ui.slider.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/Microsoft.Web.Infrastructure.dll" publishTime="01/05/2011 15:45:38" />
+    <file relUrl="bin/libMatt.pdb" publishTime="01/10/2013 19:57:36" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_glass_95_fef1ec_1x400.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Web.config" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="Views/Shared/_ActAsSelector.cshtml" publishTime="01/12/2013 10:13:22" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_flat_75_ffffff_40x100.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Shared/_LoginForm.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/Site.css" publishTime="02/02/2013 16:31:12" />
+    <file relUrl="Views/Shared/_PhoneNumberForm.cshtml" publishTime="01/10/2013 19:31:29" />
+>>>>>>> 5b5d5bf7bee0288a4b8030644d692085ec5e8c2b
     <file relUrl="bin/System.Web.Razor.xml" publishTime="12/20/2010 10:52:36" />
     <file relUrl="bin/System.Web.Abstractions.dll" publishTime="03/18/2010 19:31:26" />
-    <file relUrl="assets/css/themes/base/images/ui-bg_glass_75_dadada_1x400.png" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/images/help/Login.jpg" publishTime="10/02/2012 04:58:18" />
-    <file relUrl="assets/js/jquery-1.5.1-vsdoc.js" publishTime="12/15/2011 11:33:32" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_glass_75_dadada_1x400.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/Login.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery-1.5.1-vsdoc.js" publishTime="01/10/2013 19:31:30" />
     <file relUrl="bin/System.Web.Razor.dll" publishTime="01/05/2011 15:45:38" />
-    <file relUrl="assets/css/themes/base/jquery.ui.theme.css" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="Views/Home/Index.cshtml" publishTime="12/01/2011 13:33:26" />
-    <file relUrl="Views/User/Details.cshtml" publishTime="10/04/2012 11:09:34" />
-    <file relUrl="assets/js/jquery.validate-vsdoc.js" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/images/pencil-small.png" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="Views/Shared/Error.cshtml" publishTime="11/12/2012 10:43:42" />
-    <file relUrl="Views/Home/About.cshtml" publishTime="09/02/2011 09:15:50" />
-    <file relUrl="assets/images/cross.png" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/images/user.png" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/css/themes/base/images/ui-bg_glass_75_e6e6e6_1x400.png" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="Views/Admin/ManageAccounts.cshtml" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/images/help/MapACA_NameIt.jpg" publishTime="10/01/2012 17:32:50" />
-    <file relUrl="assets/images/minus-circle.png" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="Views/Shared/_ProducerDisclaimer.cshtml" publishTime="11/07/2011 16:19:08" />
-    <file relUrl="assets/css/themes/base/jquery.ui.tabs.css" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/FirstFrame.png" publishTime="02/29/2012 12:12:38" />
-    <file relUrl="assets/js/jquery-1.5.1.js" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="Views/Shared/CreateUser.cshtml" publishTime="01/25/2012 10:43:54" />
-    <file relUrl="assets/css/themes/base/images/ui-icons_222222_256x240.png" publishTime="12/15/2011 11:33:32" />
+    <file relUrl="assets/css/themes/base/jquery.ui.theme.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Home/Index.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="Views/User/Details.cshtml" publishTime="02/01/2013 17:51:18" />
+    <file relUrl="assets/js/jquery.validate-vsdoc.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/pencil-small.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Shared/Error.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="Views/Home/About.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/images/cross.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/user.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_glass_75_e6e6e6_1x400.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Admin/ManageAccounts.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/images/help/MapACA_NameIt.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/minus-circle.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Shared/_ProducerDisclaimer.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/themes/base/jquery.ui.tabs.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/FirstFrame.png" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/js/jquery-1.5.1.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Shared/CreateUser.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/themes/base/images/ui-icons_222222_256x240.png" publishTime="01/10/2013 19:31:30" />
     <file relUrl="bin/System.Web.WebPages.xml" publishTime="12/19/2010 23:59:38" />
+<<<<<<< HEAD
     <file relUrl="Views/Home/Help.cshtml" publishTime="10/08/2012 08:20:10" />
     <file relUrl="assets/images/asterisk.png" publishTime="12/15/2011 11:33:32" />
     <file relUrl="assets/css/themes/base/jquery.ui.base.css" publishTime="12/15/2011 11:33:32" />
@@ -125,20 +140,102 @@
     <file relUrl="assets/images/wrench.png" publishTime="12/15/2011 11:33:32" />
     <file relUrl="assets/js/MicrosoftMvcValidation.debug.js" publishTime="12/15/2011 11:33:32" />
     <file relUrl="Views/Reporting/Index.cshtml" publishTime="12/17/2012 18:08:28" />
+=======
+    <file relUrl="Views/Home/Help.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/images/asterisk.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Admin/ManageUsageReports.cshtml" publishTime="01/25/2013 20:36:04" />
+    <file relUrl="assets/images/help/Meter-To-Well-Show.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/System.Web.WebPages.Deployment.dll" publishTime="01/05/2011 15:45:38" />
+    <file relUrl="bin/Newtonsoft.Json.dll" publishTime="01/10/2013 20:06:32" />
+    <file relUrl="bin/HPEntities.dll" publishTime="02/02/2013 16:31:35" />
+    <file relUrl="assets/js/MicrosoftMvcAjax.debug.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="App_Code/UserHelpers.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/js/MicrosoftMvcAjax.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/SignUp.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Errors/General.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/themes/base/jquery.ui.dialog.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Global.asax" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/images/hpwdbanner.gif" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/IdentifyMissingWell.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/jquery.ui.datepicker.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/Legend.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery-ui-1.8.11.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery-ui-1.8.11.min.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/jquery.ui.button.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Web.config" publishTime="02/02/2013 16:31:12" />
+    <file relUrl="assets/css/themes/base/jquery.ui.progressbar.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/toggle.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/jquery.ui.base.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Session/ResetPassword.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/images/help/OtherMapTools.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/MapAMeter.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/System.Web.Mvc.dll" publishTime="01/05/2011 17:42:16" />
+    <file relUrl="assets/images/user-detective-gray.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="packages.config" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/OrderOfOperations.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/toggle-expand.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/exclamation-diamond-frame.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/MapUpdateMeterAttributes.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/plus-circle.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/jquery.ui.resizable.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery.validate.unobtrusive.min.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/_ViewStart.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/js/app.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/MapOtherToolsSoon.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery.unobtrusive-ajax.min.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/images/ui-icons_cd0a0a_256x240.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery.simplemodal.1.4.2.min.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery.validate.min.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery-1.5.1.min.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Reporting/Change_Log.txt" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="bin/libMatt.dll" publishTime="01/10/2013 19:57:37" />
+    <file relUrl="Views/Home/TestMail.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/js/modernizr-1.7.min.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/swfobject.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/MicrosoftAjax.debug.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/MapACA_Finish.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/modernizr-1.7.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Session/Login.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/themes/base/images/ui-icons_888888_256x240.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/AddProperty.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/MapACA_Start.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/jquery.ui.core.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/System.Web.WebPages.Razor.xml" publishTime="12/20/2010 10:52:36" />
+    <file relUrl="Views/Shared/_Layout.cshtml" publishTime="02/01/2013 17:51:18" />
+    <file relUrl="bin/System.Web.Routing.dll" publishTime="03/18/2010 19:31:26" />
+    <file relUrl="assets/images/help/MapACA_FinishB.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/tick-circle.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/HPAuthenticate.dll" publishTime="02/02/2013 16:31:36" />
+    <file relUrl="assets/js/MicrosoftAjax.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/ReportProduction.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/User/AddProperty.cshtml" publishTime="01/25/2013 20:36:04" />
+    <file relUrl="assets/css/themes/base/jquery.ui.selectable.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/User/ConfirmEmail.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_glass_65_ffffff_1x400.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery.tipsy.pack.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/indicator.gif" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/xfn-friend.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Admin/Index.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/css/themes/base/jquery.ui.autocomplete.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/jquery.ui.all.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Shared/_LogOnPartial.cshtml" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="assets/images/wrench.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="Views/Reporting/Index.cshtml" publishTime="02/02/2013 16:31:12" />
+>>>>>>> 5b5d5bf7bee0288a4b8030644d692085ec5e8c2b
     <file relUrl="bin/System.Web.WebPages.Razor.dll" publishTime="01/05/2011 15:45:38" />
-    <file relUrl="assets/images/help/MapACA_FinishA.jpg" publishTime="10/02/2012 04:43:36" />
-    <file relUrl="assets/images/help/MapZoomPan.jpg" publishTime="02/29/2012 12:36:54" />
-    <file relUrl="assets/images/prohibition-button.png" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/images/help/MyAccount.jpg" publishTime="02/29/2012 12:36:54" />
-    <file relUrl="bin/EntityFramework.dll" publishTime="08/14/2012 15:07:12" />
-    <file relUrl="assets/css/themes/base/jquery.ui.accordion.css" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="app_offline_template.htm" publishTime="04/25/2012 11:46:56" />
-    <file relUrl="Views/Reporting/AlternateIndex.cshtml" publishTime="12/17/2012 09:48:50" />
-    <file relUrl="assets/js/jquery.validate.js" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/js/jquery.validate.unobtrusive.js" publishTime="12/15/2011 11:33:32" />
-    <file relUrl="assets/js/json2.pack.js" publishTime="08/27/2012 09:09:02" />
-    <file relUrl="assets/js/jquery.unobtrusive-ajax.js" publishTime="12/15/2011 11:33:32" />
+    <file relUrl="assets/images/help/MapACA_FinishA.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/MapZoomPan.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/prohibition-button.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/help/MyAccount.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/jquery.ui.accordion.css" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="app_offline_template.htm" publishTime="01/10/2013 19:31:29" />
+    <file relUrl="Views/Reporting/AlternateIndex.cshtml" publishTime="01/25/2013 20:36:04" />
+    <file relUrl="assets/js/jquery.validate.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery.validate.unobtrusive.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/json2.pack.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/jquery.unobtrusive-ajax.js" publishTime="01/10/2013 19:31:30" />
     <file relUrl="bin/System.Web.Extensions.dll" publishTime="03/18/2010 19:31:26" />
+<<<<<<< HEAD
     <file relUrl="assets/images/help/AddPropertyFromMap.jpg" publishTime="10/02/2012 05:02:12" />
     <file relUrl="assets/css/themes/base/images/ui-bg_flat_0_aaaaaa_40x100.png" publishTime="12/15/2011 11:33:32" />
     <file relUrl="assets/css/themes/base/images/ui-icons_454545_256x240.png" publishTime="12/15/2011 11:33:32" />
@@ -151,6 +248,22 @@
     <file relUrl="bin/HPEntities.pdb" publishTime="01/14/2013 08:07:16" />
     <file relUrl="assets/images/hpwdback.gif" publishTime="12/15/2011 11:33:32" />
     <file relUrl="bin/HPAuthenticate.pdb" publishTime="01/14/2013 08:07:21" />
+=======
+    <file relUrl="assets/images/help/AddPropertyFromMap.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_flat_0_aaaaaa_40x100.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_glass_55_fbf9ee_1x400.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/System.Web.Helpers.dll" publishTime="01/05/2011 15:45:38" />
+    <file relUrl="assets/images/help/Reporting.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/hpwdtop3.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/HPEntities.pdb" publishTime="02/02/2013 16:31:35" />
+    <file relUrl="assets/images/help/Meter-To-Well-Assoc.jpg" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/images/ui-icons_2e83ff_256x240.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/css/themes/base/images/ui-bg_highlight-soft_75_cccccc_1x100.png" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/js/MicrosoftMvcValidation.debug.js" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="assets/images/hpwdback.gif" publishTime="01/10/2013 19:31:30" />
+    <file relUrl="bin/HPAuthenticate.pdb" publishTime="02/02/2013 16:31:36" />
+    <file relUrl="assets/css/themes/base/images/ui-icons_454545_256x240.png" publishTime="01/10/2013 19:31:30" />
+>>>>>>> 5b5d5bf7bee0288a4b8030644d692085ec5e8c2b
     <file relUrl="bin/System.Web.Mvc.xml" publishTime="02/09/2011 11:26:24" />
     <file relUrl="bin/System.Web.WebPages.Deployment.xml" publishTime="12/20/2010 10:52:36" />
   </publishProfile>

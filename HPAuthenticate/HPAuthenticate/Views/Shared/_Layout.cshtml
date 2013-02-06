@@ -65,12 +65,17 @@
 					<li>@Html.ActionLink("Login", "Login", "Session")</li>
  } else {
 					<li>@Html.ActionLink("My Account", "Details", "User")</li>
+@*<<<<<<< HEAD
 	 //if (ViewBag.CurrentUser.Properties.Count > 0) {
+=======
+>>>>>>> 5b5d5bf7bee0288a4b8030644d692085ec5e8c2b*@
 					<li><a id='link_reporting' title="Report a meter installation or an alternate method" href="@Url.Content("/hpuwcd/index.html?config=config-menu.xml")">Reporting</a></li>
-		 if (ViewBag.IsReportingDeployed != null && ViewBag.IsReportingDeployed) {
 					<li>@Html.ActionLink("Annual Report", "Index", "Reporting")</li>
+@*<<<<<<< HEAD
 		 }
 	 //}
+=======
+>>>>>>> 5b5d5bf7bee0288a4b8030644d692085ec5e8c2b*@
 					<li>@Html.ActionLink("Logout", "Logout", "Session")</li>
  }
 					@if (ViewBag.IsAdmin != null && ViewBag.IsAdmin) {
@@ -100,6 +105,12 @@
             @RenderBody()
         </section>
         <footer>
+            @if (ViewBag.IsAdmin) {
+                <div id="release_version">
+                    Release version:
+                    @Html.Raw("<a href='https://github.com/jiadreamran/HPAuthenticate/commit/" + ViewBag.CommitHash + "'>" + ViewBag.CommitHash + "</a>")
+                 </div>
+                }
 			<a href="http://hpwd.com/home.asp">Home</a> |
 			<a href="http://hpwd.com/about_us.asp">About Us</a> |
 			<a href="http://hpwd.com/the_ogallala.asp">Ogallala</a> |
