@@ -1163,12 +1163,10 @@
 						)
 						.data('calcVol', calcVol) // Store the calculated volume as data on the row for later submittal
 						.data('readingContainer', vm.readingContainer) // Store a reference to the reading to update stuff like calculation acceptance
-						.data('updateVolume', (function(row, ca, miid) {
+						.data('updateVolume', (function(vm, row, ca, miid) {
 							// Conversion factor 
 							var cFactor = 1;
 							return function() {
-								// REVIEW: I feel like we need to call _updateCalculatedVolume here,
-								// now that squeeze input is available...this does not seem to take it into account.
 
 								// Update the "total volume" column for this row based on current selections
 								var sel = $(row).find('select.user_acceptance');
@@ -1180,7 +1178,7 @@
 								if (!td || td.length == 0) {
 									return;
 								}
-								//row.data('calcVol', _updateCalculatedVolume(vm.readingContainer, $(row).find('td.calc_vol_td'), ca, miid, 1184));
+								row.data('calcVol', _updateCalculatedVolume(vm.readingContainer, $(row).find('td.calc_vol_td'), ca, miid, 1184));
 								var volume; 
 
 								// Check user revised volume - if present and dropdown says so,
@@ -1205,7 +1203,7 @@
 								td.closest('table').data('updateVolumeSum')();
 
 							};
-						})(tr, contigAcres, vm.id)); 
+						})(vm, tr, contigAcres, vm.id)); 
 
 					tbody.append(tr);
 
