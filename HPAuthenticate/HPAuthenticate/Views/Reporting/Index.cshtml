@@ -101,6 +101,7 @@
 		/// rate changes in middle readings and rollover
 		/// values.
 		function _calculateVolume(readingContainer, ca, meterInstallationId) {
+            //console.debug("readingContainer: ", readingContainer);
 			var isNozzlePackage = readingContainer.isNozzlePackage;
 			var readings = readingContainer.readings;
 			if (typeOf(readings) != 'array' || readings.length < (isNozzlePackage ? 1 : 2)) {
@@ -245,6 +246,8 @@
             multiplier = multiplier == 0 ? 1 : multiplier;
 
 			ret.volume = runningTotal * multiplier;
+            ret.meterInstallationId = meterInstallationId;
+            console.debug("ret: ", ret);
 			return ret;
 
 		};
@@ -523,9 +526,10 @@
 
 		};
 
-		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId) {			
+		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId, lineNum) {			
 			var calcVol = null;
-
+            //var calcCount = 0;
+            console.debug("Line number: ", lineNum);
 			function setCalcVolTdError(msg) {
 				// Present a warning icon to the user
 				calcVolTd.addClass('warning');
@@ -536,7 +540,10 @@
 			}
             
 			try {
+                //calcCount++;
 				calcVol = _calculateVolume(readingContainer, ca, meterInstallationId);
+                //console.debug("calcCount: ", ++calcCount);
+
 				calcVolTd.text(util.round(calcVol.volume));
 				if (calcVol.rolloverOccurred) {
 					setCalcVolTdError('It appears a meter rollover occurred; calculated volume is based on an assumed rollover value of '+ readingContainer.rolloverValue + ' for this meter.');
@@ -547,8 +554,8 @@
 					// this CA without overriding this calculated value with a
 					// user-entered volume.
 					setCalcVolTdError('This meter did not have a valid end reading; the calculated volume is estimated based on other readings and must be overridden with a user-revised volume before submittal.');
-
-				}				
+	
+                }			
 			} catch (e) {
 				calcVol = new Classes.CalculatedVolume();
 				if (e.name == 'NoReadingsException') {
@@ -1097,12 +1104,13 @@
 				for (var vmidx = 0; vmidx < rowVMs.length; vmidx++) {
 					var vm = rowVMs[vmidx];
 
+                    var hasSqueezeTR = false;
 					// var meter = _state.meterInstallations[meterInstallationId];
 					// readingContainer = contigAcres.meterReadings[meterInstallationId];
 					var isNozzlePackage = vm.readingContainer.isNozzlePackage;
 
 					var calcVolTd = $('<td></td>').addClass('calc_vol_td');
-					var calcVol = _updateCalculatedVolume(vm.readingContainer, calcVolTd, contigAcres, vm.id);
+					var calcVol = _updateCalculatedVolume(vm.readingContainer, calcVolTd, contigAcres, vm.id, 1112);
 
 					var beginReadingTd = $('<td></td>').addClass('begin_reading');
 
@@ -1131,8 +1139,10 @@
 					if (!squeezeInputBox) {
 						// If there wasn't a squeezebox to add here, suppress the cell entirely.
 						tr.addClass("no-squeeze");
+                        hasSqueezeTR = false;
 					} else {
 						hasSqueeze = true;
+                        hasSqueezeTR = true;
 					}
 					tr.addClass('meter_usage_row')
 						.attr('id', 'au_' + contigAcres.number + '_' + vm.id)
@@ -1145,7 +1155,7 @@
 						).append(
 							$('<td></td>').text(vm.readingContainer.nonStandardUnits || _state.unitDefinitions[readingUnitId] || ' ').addClass('reading_units')
 						).append(
-							$('<td></td>').addClass('squeezy').append(squeezeInputBox)
+							hasSqueezeTR ? $('<td></td>').addClass('squeezy').append(squeezeInputBox): $('<td></td>')
                         ).append(
 							calcVolTd
 						).append(
@@ -1174,7 +1184,7 @@
 								if (!td || td.length == 0) {
 									return;
 								}
-								row.data('calcVol', _updateCalculatedVolume(vm.readingContainer, $(row).find('td.calc_vol_td'), ca, miid));
+								//row.data('calcVol', _updateCalculatedVolume(vm.readingContainer, $(row).find('td.calc_vol_td'), ca, miid, 1184));
 								var volume; 
 
 								// Check user revised volume - if present and dropdown says so,
@@ -1532,7 +1542,7 @@
 												var calcVolTd = row.find('td.calc_vol_td');
 												// We're going to need a new readingContainer here.
 												var rc = _getWellReadingContainer(well);
-												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null));
+												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null, 1542));
 												_updateReadingCells(rc, row);
 												row.data('updateVolume')();
 											};
@@ -1550,7 +1560,7 @@
 												var row = $('tr#au_' + caObj.number + '_' + well.id);
 												var calcVolTd = row.find('td.calc_vol_td');
 												var rc = _getWellReadingContainer(well);
-												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null));
+												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null, 1560));
 												_updateReadingCells(rc, row);
 												row.data('updateVolume')();
 											};
