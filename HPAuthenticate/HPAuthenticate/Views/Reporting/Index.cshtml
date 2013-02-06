@@ -526,10 +526,10 @@
 
 		};
 
-		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId, lineNum) {			
+		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId) {			
 			var calcVol = null;
             //var calcCount = 0;
-            console.debug("Line number: ", lineNum);
+            //console.debug("Line number: ", lineNum);
 			function setCalcVolTdError(msg) {
 				// Present a warning icon to the user
 				calcVolTd.addClass('warning');
@@ -1110,7 +1110,7 @@
 					var isNozzlePackage = vm.readingContainer.isNozzlePackage;
 
 					var calcVolTd = $('<td></td>').addClass('calc_vol_td');
-					var calcVol = _updateCalculatedVolume(vm.readingContainer, calcVolTd, contigAcres, vm.id, 1112);
+					var calcVol = _updateCalculatedVolume(vm.readingContainer, calcVolTd, contigAcres, vm.id);
 
 					var beginReadingTd = $('<td></td>').addClass('begin_reading');
 
@@ -1542,7 +1542,7 @@
 												var calcVolTd = row.find('td.calc_vol_td');
 												// We're going to need a new readingContainer here.
 												var rc = _getWellReadingContainer(well);
-												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null, 1542));
+												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null));
 												_updateReadingCells(rc, row);
 												row.data('updateVolume')();
 											};
@@ -1560,7 +1560,7 @@
 												var row = $('tr#au_' + caObj.number + '_' + well.id);
 												var calcVolTd = row.find('td.calc_vol_td');
 												var rc = _getWellReadingContainer(well);
-												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null, 1560));
+												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null));
 												_updateReadingCells(rc, row);
 												row.data('updateVolume')();
 											};
