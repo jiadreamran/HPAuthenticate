@@ -991,7 +991,7 @@
 				// Note: store a reference to contigAcres on this reporting container so that
 				// child elements can update properties as necessary (i.e. user reported volume, etc.)
 				var container = $('<div></div>').addClass('reporting_container').data('contigAcres', contigAcres);
-				var table = $('<table><thead><tr><th>Meter #</th><th>County</th><th>Begin Reading(s)</th><th>Ending Reading</th><th>Reading Units</th><th class="squeezy">Squeeze Value</th><th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th><th>Total Volume (acre-in)</th></tr></thead></table>');
+				var table = $('<table><thead><tr><th>Meter #</th><th>County</th><th>Begin Reading(s)</th><th>Ending Reading</th><th>Reading Units</th><th class="squeeze-col">Squeeze Value</th><th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th><th>Total Volume (acre-in)</th></tr></thead></table>');
 				table.addClass('annual_usage');
 				var tbody = $('<tbody></tbody>');
 
@@ -1104,7 +1104,6 @@
 				for (var vmidx = 0; vmidx < rowVMs.length; vmidx++) {
 					var vm = rowVMs[vmidx];
 
-                    var hasSqueezeTR = false;
 					// var meter = _state.meterInstallations[meterInstallationId];
 					// readingContainer = contigAcres.meterReadings[meterInstallationId];
 					var isNozzlePackage = vm.readingContainer.isNozzlePackage;
@@ -1136,13 +1135,10 @@
 					calcUnitsDropdown.val(calcVol.unitId);
 
 					var tr = $('<tr></tr>');
-					if (!squeezeInputBox) {
-						// If there wasn't a squeezebox to add here, suppress the cell entirely.
-						tr.addClass("no-squeeze");
-                        hasSqueezeTR = false;
-					} else {
+
+					if (squeezeInputBox) {
+						// At least one row here has an applicable squeeze value.
 						hasSqueeze = true;
-                        hasSqueezeTR = true;
 					}
 					tr.addClass('meter_usage_row')
 						.attr('id', 'au_' + contigAcres.number + '_' + vm.id)
@@ -1155,7 +1151,7 @@
 						).append(
 							$('<td></td>').text(vm.readingContainer.nonStandardUnits || _state.unitDefinitions[readingUnitId] || ' ').addClass('reading_units')
 						).append(
-							hasSqueezeTR ? $('<td></td>').addClass('squeezy').append(squeezeInputBox): $('<td></td>')
+							$('<td></td>').addClass('squeeze-col').append(squeezeInputBox)
                         ).append(
 							calcVolTd
 						).append(

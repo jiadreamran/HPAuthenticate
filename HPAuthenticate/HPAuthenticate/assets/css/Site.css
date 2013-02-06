@@ -795,4 +795,4 @@ tr.well_meter_table > td, tr.user_reporting_row > td {
 
 td.miids_cell ul, td.miids_cell li { list-style-type: none; margin: 0; }
  
-.no-squeeze .squeezy { display: none; }
+.no-squeeze .squeeze-col, td.no-squeeze { display: none; }
