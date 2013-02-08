@@ -491,7 +491,7 @@
 		};
 
 		function _submitCA(contigAcres, callback) {
-            console.debug("contigAcres: ", contigAcres);
+            //console.debug("contigAcres: ", contigAcres);
 			var dto = { "state" : JSON.stringify(_state), "ca": JSON.stringify(contigAcres) };
 			var statusP = $('#submittal_status_' + contigAcres.number);
 			statusP.removeClass().addClass('ajax_loading').text('Submitting...').show();
@@ -1057,7 +1057,6 @@
 
 							readingContainer: (function(miid, contigAcres, reading) {
 								var readingC = contigAcres.meterReadings[meterInstallationId];
-                                //console.debug("readingC: ", readingC);
 								var ret = [];
 								for (var j = 0; j < readingC.readings.length; j++) {
 									ret.push({
