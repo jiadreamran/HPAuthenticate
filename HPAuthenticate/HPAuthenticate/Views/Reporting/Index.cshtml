@@ -221,6 +221,9 @@
                 	// Apply squeeze value.
                     var squeezeValue = readingContainer.squeezeValue || 0;
 
+                    // mjia: update squeeze value of this meter installation
+                    ca.meterReadings[meterInstallationId].squeezeValue = squeezeValue;
+
                     var baseLift = readingContainer.depthToRedbed - 20;
                     var adjLift = baseLift + squeezeValue * 2.3076;
                     var ecf = readingContainer.isElectric
@@ -247,7 +250,6 @@
 
 			ret.volume = runningTotal * multiplier;
             ret.meterInstallationId = meterInstallationId;
-            console.debug("ret: ", ret);
 			return ret;
 
 		};
@@ -489,6 +491,7 @@
 		};
 
 		function _submitCA(contigAcres, callback) {
+            console.debug("contigAcres: ", contigAcres);
 			var dto = { "state" : JSON.stringify(_state), "ca": JSON.stringify(contigAcres) };
 			var statusP = $('#submittal_status_' + contigAcres.number);
 			statusP.removeClass().addClass('ajax_loading').text('Submitting...').show();
@@ -542,7 +545,6 @@
 			try {
                 //calcCount++;
 				calcVol = _calculateVolume(readingContainer, ca, meterInstallationId);
-                //console.debug("calcCount: ", ++calcCount);
 
 				calcVolTd.text(util.round(calcVol.volume));
 				if (calcVol.rolloverOccurred) {
@@ -1055,6 +1057,7 @@
 
 							readingContainer: (function(miid, contigAcres, reading) {
 								var readingC = contigAcres.meterReadings[meterInstallationId];
+                                //console.debug("readingC: ", readingC);
 								var ret = [];
 								for (var j = 0; j < readingC.readings.length; j++) {
 									ret.push({
