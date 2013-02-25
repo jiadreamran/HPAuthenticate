@@ -1418,7 +1418,7 @@
 						var currentBankingTable = $('<table><tbody><tr>'
 													+ '<td>The maximum water value you can bank this year is:</td><td id="max_bank_' + contigAcres.number + '"></td>'
 													+ '</tr><tr>'
-													+ '<td>How much water do you want to bank this year?</td><td><input type="text" id="desired_bank_' + contigAcres.number + '" class="tiny" /> inches</td>'
+													+ '<td>How much water do you want to bank this year (nearest tenth inch)?</td><td><input type="text" id="desired_bank_' + contigAcres.number + '" class="tiny" /> inches</td>'
 													+ '</tr></tbody></table>')
 													.addClass('current_banking');
 	
@@ -1499,7 +1499,7 @@
 								});
 							}
 						})
-					).append($('<label>This report may only be submitted between December 15 and March 1</label>'));
+					).append($('<label>This report may only be submitted between December 15 and June 1</label>'));
 				}
 				return container;
 			}, // getAnnualUsageSection

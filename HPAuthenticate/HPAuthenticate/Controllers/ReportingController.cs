@@ -56,13 +56,13 @@ namespace HPAuthenticate.Controllers {
 		public ReportingController() {
 			var currentDate = DateTime.Now;
 
-			// Only allow reporting from 15 Dec - 15 Mar, and if 
+			// Only allow reporting from 15 Dec - 1 Jun, and if 
 			// current date is in Jan-Mar, the reporting year is "last" year.
 			if ((currentDate.Month == 12 && currentDate.Day >= 15)
-				|| (currentDate.Month < 3)
-				|| (currentDate.Month == 3 && currentDate.Day <= 1)) {
+				|| (currentDate.Month < 6)
+				|| (currentDate.Month == 6 && currentDate.Day <= 1)) {
 				IsReportingAllowed = true;
-				CurrentReportingYear = (currentDate.Month > 3) ? currentDate.Year : currentDate.Year - 1;
+				CurrentReportingYear = (currentDate.Month > 6) ? currentDate.Year : currentDate.Year - 1;
 			} else {
 				IsReportingAllowed = false;
 			}
