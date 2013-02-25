@@ -160,7 +160,7 @@ where
 order by OperatingYear asc;", new Param("@id", caId)).AsEnumerable().Select(row => new JsonBankedWaterRecord(
 						caId,
 						row["Acres"].ToInteger(),
-						row["BankedWaterInches"].ToInteger(),
+                        row["BankedWaterInches"].ToDouble(), //mjia: round banked water to the 10ths. 
 						row["OperatingYear"].ToInteger()
 					));
 

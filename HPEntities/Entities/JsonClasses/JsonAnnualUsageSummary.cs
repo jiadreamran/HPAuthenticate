@@ -12,9 +12,9 @@ namespace HPEntities.Entities.JsonClasses {
 		public double contiguousArea { get; set; }
 		public double annualVolume { get; set; }
 		public int allowableApplicationRate { get; set; }
-		public int bankedWaterFromPreviousYear { get; set; }
+        public double bankedWaterFromPreviousYear { get; set; } //mjia: round banked water to the 10ths. 
 
-		public int desiredBankInches { get; set; }
+        public double desiredBankInches { get; set; } //mjia: round banked water to the 10ths. 
 
 	}
 }

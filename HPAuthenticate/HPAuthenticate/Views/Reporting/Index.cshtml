@@ -317,6 +317,9 @@
 							var tr = $(this).closest('tr');
 							tr.data('readingContainer').userRevisedVolume = parseInt($(this).val());
 							tr.data('readingContainer').userRevisedVolumeUnitId = unitDropdown.val();
+                            readingObj.userRevisedVolume = parseInt($(this).val());
+                            readingObj.userRevisedVolumeUnitId = unitDropdown.val();
+                            console.debug(readingObj);
 							tr.data('updateVolume')();
 						})
 						.addClass('short')
@@ -491,9 +494,9 @@
 		};
 
 		function _submitCA(contigAcres, callback) {
-            //console.debug("contigAcres: ", contigAcres);
 			var dto = { "state" : JSON.stringify(_state), "ca": JSON.stringify(contigAcres) };
 			var statusP = $('#submittal_status_' + contigAcres.number);
+            console.debug("contigAcres: ", contigAcres);
 			statusP.removeClass().addClass('ajax_loading').text('Submitting...').show();
 			$.ajax(
 				"@Url.Action("SubmitUsageReport", "Reporting")",
@@ -1192,8 +1195,10 @@
 									cFactor = _unitConversionFactors[3][2];
 									volume = (row.data('calcVol') || { volume: 0 }).volume;
 								} else {
+                                    contigAcres.userRevisedVolume = true; // mjia: that is WHY the user revised volume never gets written into database!!!!!!!!!
 									cFactor = _unitConversionFactors[$('#user_revised_vol_units_' + ca.number + '_' + miid).val()][2];
 									volume = parseInt($('#user_revised_vol_' + ca.number + '_' + miid).val());
+                                    //console.debug("resived vol: ", volume);
 								}
 
 								// Display to 3 decimal places, converted to ac-in
@@ -1462,7 +1467,19 @@
 								}
 
 
-								var desiredInches = parseInt($('#desired_bank_' + contigAcres.number).val()) || 0;
+                                // mjia: change int to float
+								var desiredInches = util.round(parseFloat($('#desired_bank_' + contigAcres.number).val()) || 0);
+                                var desiredInchesInt = Math.floor(desiredInches);
+                                var fraction = desiredInches - desiredInchesInt;
+                                // Rounding eg: 10.10 to 10.15 = 10.1; 10.16 to 10.19 = 10.2
+                                var tenth = fraction * 10; // 10th = 0 to 10 (1.5)
+                                tenth = Math.round(Math.floor(tenth) * 10); // (10)
+                                var hundth = fraction * 100; // 100th = 0 to 99 (15)
+                                hundth = Math.round(hundth - tenth);
+
+                                tenth = hundth <= 5 ? tenth / 10 : tenth / 10 + 1;
+                                desiredInches = desiredInchesInt + tenth / 10;
+
 								var maxBank = contigAcres.annualUsageSummary.allowableApplicationRate;
 								if (desiredInches > maxBank) {
 									if (confirm('You cannot bank more than ' + maxBank + ' inches. Shall I automatically adjust the desired bank amount to this value?')) {

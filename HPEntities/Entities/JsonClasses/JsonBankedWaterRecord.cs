@@ -6,7 +6,8 @@ using System.Text;
 namespace HPEntities.Entities.JsonClasses {
 	public class JsonBankedWaterRecord {
 
-		public JsonBankedWaterRecord(int objectId, int acres, int bankedInches, int year) {
+        public JsonBankedWaterRecord(int objectId, int acres, double bankedInches, int year)
+        {
 			this.caObjectId = objectId;
 			this.acres = acres;
 			this.bankedInches = bankedInches;
@@ -15,7 +16,7 @@ namespace HPEntities.Entities.JsonClasses {
 
 		public int caObjectId { get; set; }
 		public int acres { get; set; }
-		public int bankedInches { get; set; }
+		public double bankedInches { get; set; } //mjia: round banked water to the 10ths. 
 		public int year { get; set; }
 
 	}

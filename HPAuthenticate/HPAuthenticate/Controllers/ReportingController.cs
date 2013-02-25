@@ -517,7 +517,7 @@ namespace HPAuthenticate.Controllers {
 				// Retrieve previous banked water values for the CA.
 				// (These are on the ca object, but we can't trust the client.)
 				var bankHistory = new ReportingDalc().GetHistoricalBankedWater(ca.number);
-				int prevBank = bankHistory.Where(x => x.year == CurrentReportingYear - 1).Select(x => x.bankedInches).DefaultIfEmpty(0).First();
+                double prevBank = bankHistory.Where(x => x.year == CurrentReportingYear - 1).Select(x => x.bankedInches).DefaultIfEmpty(0).First();//mjia: round banked water to the 10ths. 
 				int avgAppRate = (int)(ca.annualUsageSummary.annualVolume / ca.annualUsageSummary.contiguousArea);
 				int surplusSubtotal = ca.annualUsageSummary.allowableApplicationRate - avgAppRate;
 				var surplusTotal = prevBank + surplusSubtotal;
