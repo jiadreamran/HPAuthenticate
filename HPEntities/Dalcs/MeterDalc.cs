@@ -158,7 +158,7 @@ order by ReadingDate desc;", new Param("@mird", meterInstallationId),
 						ActingDisplayName = row["ActingDisplayName"].GetString(),
 						ActualUserId = row["ActualUserId"].ToInteger(),
 						ActualDisplayName = row["ActualDisplayName"].GetString(),
-						Rate = row["GallonsPerMinute"].TryToInteger(),
+                        Rate = TryToDouble(row["GallonsPerMinute"]),
 					}));
 			
 			// If we have a limit specified and the readings hit that count,
@@ -263,7 +263,7 @@ insert into MeterInstallationReadings (
 					new Param("@reading", reading.Reading.HasValue ? (object)reading.Reading.Value : DBNull.Value),
 					new Param("@actingUserId", reading.ActingUserId),
 					new Param("@actualUserId", reading.ActualUserId),
-					new Param("@gpm", reading.Rate.TryToInteger() ?? (object)DBNull.Value)
+					new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value)
 				);
 			} catch (Exception ex) {
 				errorMessage = ex.Message;

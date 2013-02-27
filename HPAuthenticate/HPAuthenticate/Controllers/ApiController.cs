@@ -291,7 +291,7 @@ namespace HPAuthenticate.Controllers {
 			return Json(dict, JsonRequestBehavior.AllowGet);
 		}
 
-		public JsonResult SaveMeterReading(string authTicket, int meterInstId, DateTime? date, double? reading, int actingUserId, int actualUserId, int? rate) {
+		public JsonResult SaveMeterReading(string authTicket, int meterInstId, DateTime? date, double? reading, int actingUserId, int actualUserId, double? rate) {
 			// First, verify that the logged-in user has the necessary permissions to 
 			// save a meter reading (including permission to use the specified userIds.)
 			var user = GetUserFromAuthTicket(authTicket);
