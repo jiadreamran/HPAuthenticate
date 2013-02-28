@@ -91,7 +91,7 @@ where
 									 // As of 20121026, formula to calculate rollover value is:
 									 //		9 * (10^(num_digits - 1)) * multiplier
 									// RolloverValue = Math.Max(1, (int)Math.Round((Math.Pow(10, row["NumberOfDigits"].ToInteger()) - 1) * row["multiplier"].ToInteger())),
-                                     RolloverValue = Math.Max(1, (int)Math.Round((Math.Pow(10, row["NumberOfDigits"].ToInteger()) - 1) * (row["multiplier"] == DBNull.Value ? 1.0d : row["multiplier"].ToDouble()))),
+                                     RolloverValue = Math.Max(1, (int)Math.Round((Math.Pow(10, row["NumberOfDigits"].ToInteger()) - 1))),
 									 MeterType = GetMeterType(row["Manufacturer"].GetString(), row["MeterModel"].GetString()),
 									 Multiplier = (row["multiplier"] == DBNull.Value ? 1.0d : row["multiplier"].ToDouble()),
 									 UnitId = row["UnitId"].TryToInteger()
@@ -210,6 +210,9 @@ order by ReadingDate desc;", new Param("@mird", meterInstallationId),
         private double? TryToDouble(object o) 
         {
             double ret;
+            if (o == null)
+                return new double?();
+            
             bool hasValue = Double.TryParse(o.ToString(), out ret);
 
             if(hasValue)
