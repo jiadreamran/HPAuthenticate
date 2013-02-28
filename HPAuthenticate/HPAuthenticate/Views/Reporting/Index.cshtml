@@ -267,9 +267,9 @@
 						.attr('name', "user_acceptance_" + caObj.number + '_' + readingObj.id)
 						.attr('id', "user_acceptance_" + caObj.number + '_' + readingObj.id)
 						.append(
-							$('<option value="1" ' + (readingObj.acceptCalculation ? 'selected="selected"' : '') + '></option').text('Yes')
+							$('<option value="1" ' + (readingObj.acceptCalculation ? 'selected="selected"' : '') + '></option>').text('Yes')
 						).append(
-							$('<option value="0" ' + (readingObj.acceptCalculation ? '' : 'selected="selected"') + '></option').text('No')
+							$('<option value="0" ' + (readingObj.acceptCalculation ? '' : 'selected="selected"') + '></option>').text('No')
 						).change(function() {
 							if ($(this).val() == 1) {
 								$(this).nextAll('div.user_revised_vol').hide();
@@ -289,10 +289,11 @@
 		/// caObj - required fields: "number" (used in section identifiers)
 		/// readingObj - required fields: "id" (used in section identifiers), 
 		///				"userRevisedVolume" (optional int; if present, prepopulates user rev vol textbox),
+		///				"userRevisedVolumeUnitId" (optional int; if present, prepopulates user rev vol unit dropdown),
 		///				"acceptCalculation" (optional bool; if present, used to show/hide section)
 		function _getUserRevisedVolSection(caObj, readingObj) {
 			var sectionIdentifier = caObj.number + '_' + readingObj.id;
-			var unitDropdown = _getUnitDropdown("user_revised_vol_units_" + sectionIdentifier, 'gallons');
+			var unitDropdown = _getUnitDropdown("user_revised_vol_units_" + sectionIdentifier, readingObj.userRevisedVolumeUnitId);
 			unitDropdown.change(function() {
 				var tr = $(this).closest('tr');
 				// Update the relevant property on the parent contiguous acres object
@@ -337,12 +338,12 @@
 			return div;
 		};
 
-		function _getUnitDropdown(name, selectedVal) {
+		function _getUnitDropdown(name, selectedUnitId) {
 			var sel = $('<select></select>').attr('name', name).attr('id', name);
 			for (var unitId in _state.unitDefinitions) {
 				// HARDCODED
 				// Warning - note hardcoded unit identifier 3 to default select Gallons
-				sel.append('<option value="' + unitId + '"' + (unitId == 3 ? 'selected="selected"' : '') + '>' + _state.unitDefinitions[unitId] + '</option>');
+				sel.append('<option value="' + unitId + '"' + (unitId == (selectedUnitId || 3) ? 'selected="selected"' : '') + '>' + _state.unitDefinitions[unitId] + '</option>');
 			}
 
 			return sel;
@@ -500,7 +501,6 @@
 		function _submitCA(contigAcres, callback) {
 			var dto = { "state" : JSON.stringify(_state), "ca": JSON.stringify(contigAcres) };
 			var statusP = $('#submittal_status_' + contigAcres.number);
-            console.debug("contigAcres: ", contigAcres);
 			statusP.removeClass().addClass('ajax_loading').text('Submitting...').show();
 			$.ajax(
 				"@Url.Action("SubmitUsageReport", "Reporting")",
@@ -866,7 +866,17 @@
 					// unique identifier for CAFOs yet exists
 					//
 					// This will play havoc with persisting these values
-					$('<td></td>').append(_getAcceptanceDropdown({number:rowIndex}, {id:rowIndex, acceptCalculation:true})).append(_getUserRevisedVolSection({number:rowIndex}, {id:rowIndex, acceptCalculation:true}))
+					$('<td></td>').append(_getAcceptanceDropdown({number:rowIndex}, {id:rowIndex, acceptCalculation:cafoObj.acceptCalculation})).append(
+							_getUserRevisedVolSection(
+								{number:rowIndex}, 
+								{
+									id:rowIndex, 
+									acceptCalculation:cafoObj.acceptCalculation,
+									userRevisedVolume: cafoObj.userRevisedVolume,
+									userRevisedVolumeUnitId: cafoObj.userRevisedVolumeUnitId
+								}
+							)
+						)
 				).append(
 					$('<td></td>').addClass('total_volume').text('0')
 				);
@@ -1183,7 +1193,7 @@
 								// Calculate the volume based on contiguous area acres
 								// and calculated volume or user revised volume for this
 								// meter installation ID.
-								var td = $(row).find('#total_volume_' + ca.number + '_' + miid);
+								var td = $(row).find('#total_volume_' + ca.number + '_' + vm.id);
 								if (!td || td.length == 0) {
 									return;
 								}
@@ -1200,14 +1210,13 @@
 									volume = (row.data('calcVol') || { volume: 0 }).volume;
 								} else {
                                     contigAcres.userRevisedVolume = true; // mjia: that is WHY the user revised volume never gets written into database!!!!!!!!!
-									cFactor = _unitConversionFactors[$('#user_revised_vol_units_' + ca.number + '_' + miid).val()][2];
-									volume = parseInt($('#user_revised_vol_' + ca.number + '_' + miid).val());
+									cFactor = _unitConversionFactors[$('#user_revised_vol_units_' + ca.number + '_' + vm.id).val()][2];
+									volume = parseInt($('#user_revised_vol_' + ca.number + '_' + vm.id).val());
                                     //console.debug("resived vol: ", volume);
 								}
 
 								// Display to 3 decimal places, converted to ac-in
 								volume = (Math.round(1000 * (volume * cFactor)) / 1000) || 0;
-
 								td.text(util.round(volume));
 
 
@@ -1339,7 +1348,7 @@
 					return function() {
 						var sum = 0;
 						$(table).find('td.total_volume').each(function() {
-							sum += parseFloat($(this).text());
+							sum += parseFloat($(this).text()) || 0;
 						});
 
 						$(table).find('td.total_volume_sum').text(util.round(sum)).data('acceptedVol', sum);
@@ -1443,7 +1452,7 @@
 								//		time permitting, add it here for performance.
 								if (config.isCafoDeployed) {
 									var cafoAr = [];
-									$(container).find('tr.cafo-row').each(function() {
+									$('#cafo_usage_' + contigAcres.number + ' tr.cafo-row').each(function() {
 										var cafoObj = $(this).data('cafoObj');
 										// Update the values on the CAFO
 										cafoObj.cafoId = parseInt($(this).find('select.cafoType').val());
