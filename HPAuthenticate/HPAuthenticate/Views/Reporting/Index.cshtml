@@ -301,7 +301,11 @@
 				// Update the associated readingContainer object
 				tr.data('readingContainer').userRevisedVolumeUnitId = $(this).val();
 
+				// Update the reading object (which is what actually gets submitted).
+				readingObj.userRevisedUnitId = $(this).val();
+
 			}).addClass('user_revised_vol_units');
+
 			var txt = $('<input type="text" name="user_revised_vol_' + sectionIdentifier + '"></input>')
 						.attr('id', 'user_revised_vol_' + sectionIdentifier)
 						.addClass('user_revised_vol')
@@ -1439,7 +1443,7 @@
 								//		time permitting, add it here for performance.
 								if (config.isCafoDeployed) {
 									var cafoAr = [];
-									$('tr.cafo-row').each(function() {
+									$(container).find('tr.cafo-row').each(function() {
 										var cafoObj = $(this).data('cafoObj');
 										// Update the values on the CAFO
 										cafoObj.cafoId = parseInt($(this).find('select.cafoType').val());
@@ -1460,6 +1464,15 @@
 									// what's displayed in the table
 									contigAcres.cafos = cafoAr;
 								}
+
+								// Pick up meter volumes within this CA
+								$(container).find('tr.meter_usage_row').each(function() {
+									var readingContainer = $(this).data('readingContainer');
+									contigAcres.meterReadings[readingContainer.id].calculatedVolumeGallons = parseInt($(this).data('calcVol').volume);
+									contigAcres.meterReadings[readingContainer.id].acceptCalculation = readingContainer.acceptCalculation;
+									contigAcres.meterReadings[readingContainer.id].userRevisedVolume = readingContainer.userRevisedVolume;
+									contigAcres.meterReadings[readingContainer.id].userRevisedVolumeUnitId = readingContainer.userRevisedVolumeUnitId;
+								});
 
 								// For debugging purposes.								
 								if (config.preventSubmit) { 
@@ -1782,12 +1795,8 @@
 
 				var rptgTable = this.getAnnualUsageSection(caObj, year == reportingSummary.state.currentReportingYear, circumstanceId);
 
-
-				///////// CAFO Usage table goes here
-
 				var cafoSection = $('<section id="cafo_usage_' +  caObj.number + '"></section>').css({display:'none'});
 				wmtTd.append(cafoSection);
-				///////// END CAFO SECTION
 
 				wmtTd.append($('<h4></h4>').attr('id', 'annual_usage_title_' + caObj.number).text('Annual Usage')).append(rptgTable);
 
@@ -1923,22 +1932,6 @@
 							.addClass(caObj.isSubmitted ? 'submitted' : 'unsubmitted')
 							.text(caObj.isSubmitted ? 'Submitted' : 'Unsubmitted')
 					).append(
-/* <<<<<<< AlternateIndex.cshtml
-						// Special circumstances checkbox - as of 2012.11.16, do not add
-						// If we ever add this back, on the next line down below, adjust the
-						// "find" criteria to be 'td:not(:last-child)' instead of just 'td'.
-						// $('<label>Wells on this CA cannot produce 1.25 AF/ac</label>').prepend(chkbox)
-					).find('td').click(clickHandler).end()
-					// Add a click handler to all TDs except the last ones (containing the
-					// label/checkbox combo, which handles resetting the meter table on their own)
-
-				);
-
-
-			}
-
-			$('#rptg_summary').empty().append($('<h3>Contiguous Acres</h3>')).append(caList);
-======= */
 						$('<td></td>')
 							.append(
 								// Is the current user the owner of the CA?

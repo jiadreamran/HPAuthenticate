@@ -222,8 +222,6 @@ when not matched then
 
 					if (Config.IsCafoDeployed) {
 						foreach (var cafo in ca.cafos) {
-							int userRevisedGallons = (int)Config.Instance.ConvertVolume((double)cafo.userRevisedVolume.GetValueOrDefault(), cafo.userRevisedVolumeUnitId.GetValueOrDefault().ToString(), "gallons");
-
 							ExecuteNonQuery(@"
 merge ReportedCafoUsage as target
 using (
@@ -234,7 +232,8 @@ using (
 		@cafoOperationId as cafoOperationId,
 		@avgLivestock as avgLivestock,
 		@calcVolGals as calcVolGals,
-		@userRevisedVol as userRevisedVolGals
+		@userRevisedVol as userRevisedVol,
+        @userRevisedVolUnitId as userRevisedVolUnitId
 ) as source on (
 	target.CafoUsageId = source.cafoUsageId
 )
@@ -245,7 +244,8 @@ when matched then
         ContiguousAcresId = source.caId,
 		AvgLivestockPerDay = source.avgLivestock,
 		CalculatedVolumeGallons = source.calcVolGals,
-		UserRevisedVolumeGallons = source.userRevisedVolGals
+		UserRevisedVolume = source.userRevisedVol,
+        UserRevisedVolumeUnitId = source.userRevisedVolUnitId
 when not matched then
 	insert (
 		OperatingYear,
@@ -253,14 +253,16 @@ when not matched then
 		CafoOperationId,
 		AvgLivestockPerDay,
 		CalculatedVolumeGallons,
-		UserRevisedVolumeGallons
+		UserRevisedVolume,
+        UserRevisedVolumeUnitId
 	) values (
 		source.operatingYear,
         source.caId,
 		source.cafoOperationId,
 		source.avgLivestock,
 		source.calcVolGals,
-		source.userRevisedVolGals
+		source.userRevisedVol,
+        source.userRevisedVolUnitId
 	);", 
 								new Param("@cafoUsageId", cafo.id > -1 ? cafo.id : (object)DBNull.Value),
 								new Param("@operatingYear", ca.year),
@@ -268,15 +270,14 @@ when not matched then
 								new Param("@cafoOperationId", cafo.cafoId),
 								new Param("@avgLivestock", cafo.avgLivestock),
 								new Param("@calcVolGals", cafo.calculatedVolumeGallons),
-								new Param("@userRevisedVol", (cafo.acceptCalculation ? (object)DBNull.Value : userRevisedGallons))
+								new Param("@userRevisedVol", (cafo.acceptCalculation ? (object)DBNull.Value : cafo.userRevisedVolume)),
+                                new Param("@userRevisedVolUnitId", (cafo.acceptCalculation ? (object)DBNull.Value : cafo.userRevisedVolumeUnitId))
 							);
 						}
 					}
 	
 					// Save reported meter volumes
 					foreach (var mr in ca.meterReadings) {
-						
-						int userRevisedGallons = (int)Config.Instance.ConvertVolume(mr.Value.userRevisedVolume, mr.Value.userRevisedVolumeUnitId.GetValueOrDefault().ToString(), "gallons");
 						ExecuteNonQuery(@"
 merge ReportedMeterVolumes as target
 using (
@@ -287,7 +288,8 @@ using (
 		@actualUserId as actualUserId,
 		@actingUserId as actingUserId,
 		@calcVolGals as calcVolGals,
-		@userRevisedVolGals as userRevisedVolGals
+		@userRevisedVol as userRevisedVol,
+        @userRevisedVolUnitId as userRevisedVolUnitId
 ) as source on (
 	target.ContiguousAcresId = source.caId
 	and target.MeterInstallationId = source.miid
@@ -298,7 +300,8 @@ when matched then
 		ActualUserId = source.actualUserId,
 		ActingUserId = source.actingUserId,
 		CalculatedVolumeGallons = source.calcVolGals,
-		UserRevisedVolumeGallons = source.userRevisedVolGals,
+		UserRevisedVolume = source.userRevisedVol,
+        UserRevisedVolumeUnitId = source.userRevisedVolUnitId,
 		SubmitDatetime = GETDATE()
 when not matched then
 	insert (
@@ -308,7 +311,8 @@ when not matched then
 		ActualUserId,
 		ActingUserId,
 		CalculatedVolumeGallons,
-		UserRevisedVolumeGallons,
+		UserRevisedVolume,
+        UserRevisedVolumeUnitId,
 		SubmitDatetime
 	) values (
 		source.miid,
@@ -317,7 +321,8 @@ when not matched then
 		source.actualUserId,
 		source.actingUserId,
 		source.calcVolGals,
-		source.userRevisedVolGals,
+		source.userRevisedVol,
+        source.userRevisedVolUnitId,
 		GETDATE()
 	);",
 								new Param("@caId", ca.number),
@@ -325,8 +330,9 @@ when not matched then
 								new Param("@year", ca.year),
 								new Param("@actualUserId", user.Id),
 								new Param("@actingUserId", user.ActingAsUserId ?? user.Id),
-								new Param("@calcVolGals", mr.Value.calculatedVolume),
-								new Param("@userRevisedVolGals", mr.Value.acceptCalculation ? (object)DBNull.Value : userRevisedGallons)
+								new Param("@calcVolGals", mr.Value.calculatedVolumeGallons),
+								new Param("@userRevisedVol", mr.Value.userRevisedVolume.GetValueOrDefault() == 0 ? (object)DBNull.Value : mr.Value.userRevisedVolume),
+                                new Param("@userRevisedVolUnitId", mr.Value.userRevisedVolume.GetValueOrDefault() == 0 ? (object)DBNull.Value : mr.Value.userRevisedVolumeUnitId)
 						);
 
 					}

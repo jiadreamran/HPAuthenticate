@@ -194,7 +194,7 @@ namespace HPAuthenticate.Controllers {
 				ca.Wells = wellDalc.GetWells(wellIds[ca.caID].ToArray()).ToArray();
 				var reportedVolumes = mdalc.GetReportedVolumeGallons(ca.Wells.SelectMany(w => w.MeterInstallationIds), ca.caID, CurrentReportingYear);
 				JsonContiguousAcres ret = new JsonContiguousAcres(ca, CurrentReportingYear);
-				Tuple<int, int> rvol;
+				ReportedVolume rvol;
 				ret.meterReadings = new Dictionary<int, JsonMeterReadingContainer>();
 				MeterInstallation meter = null;
 
@@ -202,9 +202,10 @@ namespace HPAuthenticate.Controllers {
 					meterInstallations.TryGetValue(miid, out meter);
 					var container = new JsonMeterReadingContainer() {
 						meterInstallationId = miid,
-						calculatedVolume = reportedVolumes.TryGetValue(miid, out rvol) ? rvol.Item1 : 0,
-						acceptCalculation = rvol == null || rvol.Item2 == 0,
-						userRevisedVolume = rvol != null ? rvol.Item2 : 0,
+						calculatedVolumeGallons = reportedVolumes.TryGetValue(miid, out rvol) ? rvol.CalculatedVolumeGallons : 0,
+						acceptCalculation = rvol == null || !rvol.UserRevisedVolumeUnitId.HasValue,
+						userRevisedVolume = rvol != null && rvol.UserRevisedVolume.HasValue ? rvol.UserRevisedVolume.Value : 0,
+                        userRevisedVolumeUnitId = rvol != null && rvol.UserRevisedVolumeUnitId.HasValue ? rvol.UserRevisedVolumeUnitId.Value : new int?(),
 						totalVolumeAcreInches = 0,
 						isNozzlePackage = meter != null ? meter.MeterType.Description().ToLower() == "nozzle package" : false,
                         isElectric = meter != null ? meter.MeterType.Description().ToLower() == "electric" : false,
@@ -481,7 +482,7 @@ namespace HPAuthenticate.Controllers {
 
 				foreach (var mr in ca.meterReadings) {
 					if (mr.Value.acceptCalculation) {
-						if (mr.Value.calculatedVolume < 0) {
+						if (mr.Value.calculatedVolumeGallons < 0) {
 							errors.Add("Meter ID " + mr.Key.ToString() + " has an invalid volume.");
 						}
 					} else {

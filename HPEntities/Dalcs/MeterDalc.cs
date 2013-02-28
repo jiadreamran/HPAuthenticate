@@ -280,29 +280,33 @@ insert into MeterInstallationReadings (
 		/// </summary>
 		/// <param name="meterInstallationId"></param>
 		/// <returns></returns>
-		public Dictionary<int, Tuple<int, int>> GetReportedVolumeGallons(IEnumerable<int> meterInstallationIds, int caId, int year) {
+		public Dictionary<int, ReportedVolume> GetReportedVolumeGallons(IEnumerable<int> meterInstallationIds, int caId, int year) {
 			if (meterInstallationIds.Count() == 0) {
-				return new Dictionary<int, Tuple<int, int>>();
+				return new Dictionary<int, ReportedVolume>();
 			}
 			var paramNames = string.Join(",", meterInstallationIds.Select((x, i) => "@p" + i.ToString()));
 			var paramValues = meterInstallationIds.Select((x, i) => new Param("@p" + i.ToString(), x));
-			return ExecuteDataTable(@"
+            var ret = new Dictionary<int, ReportedVolume>();
+            foreach (var row in ExecuteDataTable(@"
 select
 	MeterInstallationId,
 	CalculatedVolumeGallons,
-	UserRevisedVolumeGallons
+	UserRevisedVolume,
+    UserRevisedVolumeUnitId
 from ReportedMeterVolumes
 where
 	MeterInstallationID in (" + paramNames + @")
 	and ContiguousAcresId = @caId
 	and OperatingYear = @year;", paramValues.Concat(new[] { new Param("@year", year), new Param("@caId", caId) }).ToArray())
-							   .AsEnumerable().ToDictionary(
-									row => row["MeterInstallationId"].ToInteger(),
-									row => new Tuple<int, int>(
-										row["CalculatedVolumeGallons"].ToInteger(),
-										row["UserRevisedVolumeGallons"].ToInteger()
-									)
-								);
+							   .AsEnumerable()) {
+                    ret[row["MeterInstallationId"].ToInteger()] = new ReportedVolume() {
+                            CalculatedVolumeGallons = row["CalculatedVolumeGallons"].ToInteger(),
+                            UserRevisedVolume = row["UserRevisedVolume"].TryToInteger(),
+                            UserRevisedVolumeUnitId = row["UserRevisedVolumeUnitId"].ToInteger()
+                    };
+					
+            }
+            return ret;
 		}
 
 		public IEnumerable<Well> GetAssociatedWells(int meterId) {
