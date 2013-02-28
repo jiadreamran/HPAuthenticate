@@ -20,6 +20,6 @@ namespace HPEntities.Entities {
 		public string ActingDisplayName { get; set; }
 		public int ActualUserId { get; set; }
 		public string ActualDisplayName { get; set; }
-		public int? Rate { get; set; }
+		public double? Rate { get; set; }
 	}
 }

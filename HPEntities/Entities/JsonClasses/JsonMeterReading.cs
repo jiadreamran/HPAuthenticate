@@ -7,7 +7,7 @@ namespace HPEntities.Entities.JsonClasses {
 	public class JsonMeterReading {
 
 		public double? reading { get; set; }
-		public int? rate { get; set; }
+		public double? rate { get; set; }
 
 		// Indicates whether a meter reading is valid
 		// for calculating volume (falls within Dec 15 - Jan 15

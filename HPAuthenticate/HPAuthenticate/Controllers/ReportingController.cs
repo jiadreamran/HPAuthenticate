@@ -219,7 +219,7 @@ namespace HPAuthenticate.Controllers {
 						countyId = meter != null ? meter.CountyId : -1,
 						meterType = meter != null ? meter.MeterType.Description() : "",
 						nonStandardUnits = meter != null && meter.MeterType != HPEntities.Entities.Enums.MeterType.standard ? new MeterDalc().GetUnits(meter.MeterType).Description() : "",
-						meterMultiplier = meter != null ? meter.Multiplier : 1.0d
+						meterMultiplier = meter.Multiplier != 0 ? meter.Multiplier : 1.0d // Make sure multiplier is not 0. NULL value is already converted to 1.0d in Dalc
 					};
 
                     // Add depth to redbed if the meter is of 1) natural gas or 2) electric
@@ -421,6 +421,30 @@ namespace HPAuthenticate.Controllers {
 				pageState = JObject.FromObject(GetPageStateJson(ActingUser)).ToString()
 			});
 		}
+
+        public ActionResult NoneCAFOIndex()
+        {
+            ViewBag.IsCafoDeployed = ConfigurationManager.AppSettings["is_cafo_deployed"].ToBoolean();
+            ViewBag.IsEcfDeployed = ConfigurationManager.AppSettings["is_ecf_deployed"].ToBoolean();
+            ViewBag.CurrentUserEmailAddress = ActingUser.Email;
+            if (new ReportingDalc().CanUserOverrideReportingDates(ActualUser.ActingAsUserId ?? ActualUser.Id))
+            {
+                IsReportingAllowed = true;
+            }
+
+            if (Request["code"] != "1111")
+            {
+                return RedirectToAction("Index");
+            }
+
+            var cdalc = new ConfigDalc();
+            return View(new ReportingViewModel()
+            {
+                meterUnitConversionFactors = JObject.FromObject(cdalc.GetAllMeterUnitConversionFactors()).ToString(),
+                unitConversionFactors = JObject.FromObject(cdalc.GetAllUnitConversionFactors()).ToString(),
+                pageState = JObject.FromObject(GetPageStateJson(ActingUser)).ToString()
+            });
+        }
 
 		#region Validation support
 
