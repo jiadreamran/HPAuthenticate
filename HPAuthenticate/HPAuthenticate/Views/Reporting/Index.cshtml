@@ -979,7 +979,7 @@
 		// Adds a CAFO section to the page, if not already present.
 		// If there is already a CAFO table on the page, this function does nothing
 		// (to avoid wiping out previously-entered data).
-		function _updateCafoSection(caObj) {
+		function _updateCafoSection(caObj, isEditable) {
 			if (!config.isCafoDeployed) {
 				return false;
 			}
@@ -997,6 +997,10 @@
 			section.empty().append($('<h4></h4>').text("Animal Feeding Operation Usage")).append(
 				table
 			).show();
+
+			if (caObj.isSubmitted || !isEditable || !contigAcres.isCurrentUserOwner) {
+				section.find('input, select').attr('disabled', 'disabled');
+			}
 		}
 
 
@@ -1696,7 +1700,7 @@
 														}
 														// Update the annual usage title in case the CAFO/non-CAFO status for this CA changed.
 														_updateStandardAnnualUsageTitle(caObj.number, td.closest('tr.user_reporting_row'));
-														_updateCafoSection(caObj);
+														_updateCafoSection(caObj, year == reportingSummary.state.currentReportingYear);
 
 													}
 													// else do nothing - success false, so error remains
@@ -1812,7 +1816,7 @@
 				// Immediately update the text for the above header based on presence
 				// or non-presence of CAFOs.
 				_updateStandardAnnualUsageTitle(caObj.number, wmtTd.closest('tr.user_reporting_row'));
-				_updateCafoSection(caObj);
+				_updateCafoSection(caObj, year == reportingSummary.state.currentReportingYear);
 
 				// Update all calculated volumes now that table is added to dom
 				$('tr.meter_usage_row').each(function() {
