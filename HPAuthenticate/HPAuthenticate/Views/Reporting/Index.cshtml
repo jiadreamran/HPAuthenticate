@@ -861,7 +861,7 @@
 						contigAcres.annualUsageSummary.annualVolume = parseInt(sum);
 
 						// Update the annual usage summary table
-						rptgTable.find('td.annual_volume').text(sum);
+						rptgTable.find('td.annual_volume').text(util.round(sum));
 						var avgAppRate = sum / contigAcres.annualUsageSummary.contiguousArea;
 						var allowableAppRate = contigAcres.annualUsageSummary.allowableApplicationRate;
 						var surplusSubtotal = allowableAppRate - avgAppRate;
