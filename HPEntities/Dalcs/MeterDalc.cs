@@ -241,11 +241,47 @@ from UnitsOfMeasure;").AsEnumerable().ToDictionary(
 				);
 		}
 
+        /*
+merge ReportingErrorResponses as target
+using (
+	select 
+		@actualUserId as actualUserId,
+		@actingUserId as actingUserId,
+		@wellId as wellId,
+		@meterInstallationId as meterInstallationId,
+		@errorResponse as errorResponse
+) as source on (
+	target.actualUserId = source.actualUserId
+	and target.actingUserId = source.actingUserId
+	and target.wellId = source.wellId
+	and target.meterInstallationId = source.meterInstallationId
+)
+when not matched then 
+	insert (
+		ActualUserId,
+		ActingUserId,
+		WellId,
+		MeterInstallationId,
+		ErrorResponse,
+		DateRecorded
+	) values (
+		source.actualUserId,
+		source.actingUserId,
+		source.wellId,
+		source.meterInstallationId,
+		source.errorResponse,
+		getdate()
+	)
+when matched then
+	update set
+		ErrorResponse = source.errorResponse,
+		DateRecorded = getdate();
+"*/
 
 		public bool SaveMeterReading(MeterReading reading, out string errorMessage) {
 			errorMessage = "";
 			try {
-				ExecuteNonQuery(@"
+				/*ExecuteNonQuery(@"
 insert into MeterInstallationReadings (
 	MeterInstallationID,
 	ReadingDate,
@@ -267,7 +303,50 @@ insert into MeterInstallationReadings (
 					new Param("@actingUserId", reading.ActingUserId),
 					new Param("@actualUserId", reading.ActualUserId),
 					new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value)
-				);
+				);*/
+                ExecuteNonQuery(@"
+merge MeterInstallationReadings as target
+using (
+	select 
+		@installationId as installationId,
+		@date as date,
+		@reading as reading,
+		@actingUserId as actingUserId,
+		@actualUserId as actualUserId,
+        @gpm as gpm
+) as source on (
+	target.MeterInstallationID = source.installationId
+	and target.ReadingDate = source.date
+	and target.Reading = source.reading
+	and target.ActingUserId = source.actingUserId
+    and target.ActualUserId = source.actualUserId
+)
+when not matched then 
+	insert (
+		MeterInstallationID,
+		ReadingDate,
+		Reading,
+		ActingUserId,
+		ActualUserId,
+		GallonsPerMinute
+	) values (
+		source.installationId,
+		source.date,
+		source.reading,
+		source.actingUserId,
+		source.actualUserId,
+		source.gpm
+	)
+when matched then
+	update set
+		MeterInstallationID = source.installationId;
+",
+                    new Param("@installationId", reading.MeterInstallationId),
+                    new Param("@date", reading.Date),
+                    new Param("@reading", reading.Reading.HasValue ? (object)reading.Reading.Value : DBNull.Value),
+                    new Param("@actingUserId", reading.ActingUserId),
+                    new Param("@actualUserId", reading.ActualUserId),
+                    new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value));
 			} catch (Exception ex) {
 				errorMessage = ex.Message;
 				return false;
