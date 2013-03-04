@@ -198,7 +198,7 @@ order by ReadingDate desc;", new Param("@mird", meterInstallationId),
 						MeterInstallationId = meter.MeterInstallationId,
 						MeterInstallationReadingId = 0, // This doesn't have a reading id because it's the initial reading
                         Rate = rateForNozzlePackage,
-						Reading = (int)meter.InitialReading.Value
+						Reading = (double)meter.InitialReading.Value
 					});
 				}
 			}
