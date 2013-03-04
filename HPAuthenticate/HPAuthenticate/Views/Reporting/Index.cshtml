@@ -1272,13 +1272,19 @@
 									? $('<span>You are responsible for annual reporting on this CA.</span>')
 									// Else, display a link to mail the true owner.
 									: $('<label>You are not responsible </label>'
-                                    ).append($('<a></a>').attr('href', '#').text('Email Responsible Party').click(function(e) {
+                                    ).append($('<a></a>').text('Email Responsible Party')
+                                                .attr('href', '#')
+                                                .attr('rowCaDesc', caObj.description)
+                                                .attr('rowCaId', caObj.number)
+                                                .click(function(e) {
 										e.stopPropagation();
 										e.preventDefault();
+                                        var rowCaDesc = $(this).attr('rowCaDesc');
+                                        var rowCaId = $(this).attr('rowCaId');
 										// Display a form allowing the user to compose a message
 										// to the CA owner.
 										$('<div></div>').append(
-											$('<h2>Contact Owner of ' + caObj.description + '</h2>')
+											$('<h2>Contact Owner of ' + rowCaDesc + '</h2>')
 										).append(
 											$('<p>Compose your message below, then click "Send" to email the owner of these contiguous acres. (Note: Your email address will be visible to the owner and he will be able to reply directly to that address.)</p>')
 										).append(
@@ -1290,13 +1296,14 @@
 												// Update the status indicator, disable the send/cancel buttons
 												// during send
 												var statusEl = $(this).closest('div').find('input,textarea').attr('disabled', 'disabled').end().find('.status').addClass('ajax_loading').text('Sending message...');
-												console.debug(caObj);
+												
+                                                console.debug('caDesc: ', rowCaDesc, 'caId: ', rowCaId);
 												$.ajax(
 													'Reporting/EmailCAOwner',
 													{
 														type:'POST',
 														data:{
-															caId:caObj.number,
+															caId:rowCaId,
 															message:$('#contactCAOwnerMessage').val()
 														},
 														complete: function() {
