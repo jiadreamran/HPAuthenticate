@@ -533,7 +533,7 @@ namespace HPAuthenticate.Controllers {
 					if (well.meterInstallationIds.Length == 0) {
 						// Check to see if there's already been a user error response
 						if (!rdalc.IsWellErrorResponseRecorded(well.id, ActualUser.ActingAsUserId ?? ActualUser.Id)) {
-							errors.Add("Well #" + well.id + " has no associated meters.");
+							errors.Add("Well #" + well.permitNumber + " has no associated meters.");
 						}
 					}
 				}
