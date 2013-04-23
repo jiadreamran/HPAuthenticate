@@ -21,5 +21,9 @@ namespace HPEntities.Entities {
 		public int ActualUserId { get; set; }
 		public string ActualDisplayName { get; set; }
 		public double? Rate { get; set; }
+
+        public int? IsSubmitted { get; set; }
+        public int? ReadingType { get; set; }
+        public int? ReportingYear { get; set; }
 	}
 }

@@ -92,6 +92,12 @@
                         this._super(message);
                         this.name = 'NoBeginReadingException';
                     }
+                }),
+                NoEndReadingException: Exception.extend({
+                    init: function(message){
+                        this._super(message);
+                        this.name = 'NoEndReadingException';
+                    }
                 })
 			};
 
@@ -126,7 +132,7 @@
 				throw new Errors.NoReadingsException();
 			}
             //console.debug("readings: ", readings);
-            console.debug("rolloverValue: ", rolloverValue);
+            console.debug("nonStandardUnits: ", nonStandardUnits); // mjia: if it is a water meter, the nonStandardUnits will be blank
 			// There are some readings, but maybe not all of them are valid for
 			// calculating volume. (The dates have to fall within particular ranges.)
 			// Happily, the middleware figures this out for us; we just have to
@@ -139,7 +145,7 @@
 						validReadings.push(readings[i]);
 					}
 				}
-
+                console.debug("valid readings: ", readings);
                 //***************************************************************************************************************
                 // Meng
                 // If the number of valid readings is 0, then the entire reading set is not valid, no need to deal with this case
@@ -158,15 +164,19 @@
                     else
                     {
                         // Use the last reading as the valid end reading
-                        //throw new Errors.NoReadingsException();
-                        ca.isFakingValidReadings = true;
-                        validReadings.push(readings[readings.length - 1]);
+                        if(validReadings[0].isValidBeginReading)
+                            throw new Errors.NoEndReadingException();
+                        else if(validReadings[0].isValidEndReading)
+                            throw new Errors.NoBeginReadingException();
+                        //ca.isFakingValidReadings = true;
+                        //validReadings.push(readings[readings.length - 1]);
                     }
                 }
                 readings = validReadings;
                 //console.debug("valid readings: ", readings);
                 //***************************************************************************************************************
 
+                console.debug("valid readings: ", readings);
                 var hasBeginReadingThisMeter = false;
                 // Check if there is a begin reading
                 for(var i = 0; i < readings.length; i++){
@@ -175,12 +185,22 @@
                     }
                 }
                 _hasBeginReading.push(hasBeginReadingThisMeter);
-
-                //console.debug("Has begin reading?: ", hasBeginReadingThisMeter);
-
                 if(!hasBeginReadingThisMeter){
                     throw new Errors.NoBeginReadingException();
                 }
+
+                var hasEndReadingThisMeter = false;
+                for(var i = 0; i < readings.length; i++)
+                {
+                    if(readings[i].isValidEndReading)
+                        hasEndReadingThisMeter = true;
+                }
+                _hasEndReading.push(hasEndReadingThisMeter);
+                if(!hasEndReadingThisMeter){
+                    throw new Errors.NoEndReadingException();
+                }
+
+                //console.debug("Has begin reading?: ", hasBeginReadingThisMeter);               
 			}
 
 			// At this point, if we don't have enough readings, throw an exception
@@ -192,7 +212,7 @@
 			}
 
 			if (rolloverValue <= 0) {
-                // Meng: add check point on rollover value: the readings should be increasing if rollover value is not used:
+                // mjia: add check point on rollover value: the readings should be increasing if rollover value is not used:
                 //if()
 				//throw new Errors.InvalidRolloverException('Unable to calculate volume; meter rollover value ("' + rolloverValue + '") is not valid.');
 			}
@@ -378,6 +398,7 @@
         var _isFakingValidReadings = false; // Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
         var _userRevisedVolume = false; // If the user does not accept the calculated volume, this variable (if true) indiates that he is using his own calculation. When submitting the report, if this value is true, it will not check whether the readings are valid.
         var _hasBeginReading = [];
+        var _hasEndReading = [];
         var _miscReportDisable; // Used to disable the submit button when there is an error
         var _notEnoughReadings = [];
         var _notEnoughReadingsAllMeters = false;
@@ -392,6 +413,7 @@
             var ret;
             //$('#user_revised_vol_units_' + ca.number + '_' + miid)
             var hasValidBeginReadings = true;
+            var hasValidEndReadings = true;
 
             for(var i = 0; i < _hasBeginReading.length; i++){
                 var hasBeginReadingThisMeter = _hasBeginReading[i];
@@ -403,6 +425,16 @@
                 }
             }
             ca.hasValidBeginReadings = hasValidBeginReadings;
+
+            for(var i = 0; i < _hasEndReading.length; i++){
+                var hasEndReadingThisMeter = _hasEndReading[i];
+                //console.debug("This meter has a valid begin reading: ", hasBeginReadingThisMeter)
+                if(!hasEndReadingThisMeter)
+                {
+                    hasValidEndReadings = false;
+                    break;
+                }
+            }
 
             // This is just a part to decide whether the readings are enough for all the meters, it will change _notEnoughtReadingsAllMeters,
             // but it will NOT disable the submit button
@@ -652,6 +684,13 @@
 							calcVol.volume = 0;
 							calcVolTd.text("0").addClass('warning')
 									.attr('title', 'No valid begin reading reported! Unable to submit volume. (Note: begin reading starts from Dec. 15 (last year) to Jan. 15)')
+									.ready(function() {
+										$(calcVolTd).tipsy({gravity: 's'});
+									});
+                        }else if (e.name == 'NoEndReadingException') {
+							calcVol.volume = 0;
+							calcVolTd.text("0").addClass('warning')
+									.attr('title', 'No valid end reading reported! Unable to submit volume. (Note: end reading starts from Dec. 15 to Jan. 15 (next year))')
 									.ready(function() {
 										$(calcVolTd).tipsy({gravity: 's'});
 									});

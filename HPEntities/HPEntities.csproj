@@ -79,11 +79,13 @@
     <Compile Include="Entities\Enums\UserEditMode.cs" />
     <Compile Include="Entities\GisMeter.cs" />
     <Compile Include="Entities\JsonClasses\JsonAnnualUsageSummary.cs" />
+    <Compile Include="Entities\JsonClasses\JsonApplyMeterReadingsObject.cs" />
     <Compile Include="Entities\JsonClasses\JsonBankedWaterRecord.cs" />
     <Compile Include="Entities\JsonClasses\JsonCafo.cs" />
     <Compile Include="Entities\JsonClasses\JsonCafoLookup.cs" />
     <Compile Include="Entities\JsonClasses\JsonContiguousAcres.cs" />
     <Compile Include="Entities\JsonClasses\JsonErrorCondition.cs" />
+    <Compile Include="Entities\JsonClasses\JsonFlexMeterReadingObject.cs" />
     <Compile Include="Entities\JsonClasses\JsonMeterInstallation.cs" />
     <Compile Include="Entities\JsonClasses\JsonMeterReading.cs" />
     <Compile Include="Entities\JsonClasses\JsonMeterReadingContainer.cs" />

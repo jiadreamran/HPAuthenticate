@@ -147,7 +147,9 @@
 	</dl>
 }
 
-
+@if (Model.AdminProperties || Model.User.IsAdmin) 
+{
+<!-- Only allow user to see properties if he is admin -->
 <h2>Property Descriptions</h2>
 
 <p>
@@ -169,33 +171,39 @@
 		</tr>
 	</thead>
 	<tbody>
-		@if (Model.Properties.Count == 0) {
+		@if (Model.Properties.Count == 0)
+  {
 			<tr>
 				<td colspan='5'>No properties found! @Html.ActionLink("Add one now", "AddProperty").</td>
 			</tr>
-		} else {
-			foreach (var propAssoc in Model.Properties) {
+  }
+  else
+  {
+      foreach (var propAssoc in Model.Properties)
+      {
 				<tr>
 					<td>
-						@if (propAssoc.Property.IsAppraisalRollDataModified) {
+						@if (propAssoc.Property.IsAppraisalRollDataModified)
+      {
 							<img src="@Url.Image("asterisk.png")" alt="*" title="Owner data has been user-modified and differs from appraisal district data." />
-						}
+      }
 					</td>
 					<td>@propAssoc.Property.County</td>
 					<td>@propAssoc.Property.ParcelId</td>
 					<td>@propAssoc.Property.Description</td>
 					<td>
-						@using (Html.BeginForm("DeleteProperty", "User", FormMethod.Post)) {
+						@using (Html.BeginForm("DeleteProperty", "User", FormMethod.Post))
+      {
 							@Html.Hidden("clientPropertyId", propAssoc.Id)
 							<input type="image" data-needs-confirm="true" src="@Url.Image("cross.png")"></input>
-						}
+      }
 					</td>
 				</tr>
-			}
-		}
+      }
+  }
 	</tbody>
 </table>
-
+}
 
 
 <script type="text/javascript">

@@ -243,7 +243,8 @@ namespace HPAuthenticate.Controllers {
 											  reading = mr.Reading,
 											  rate = mr.Rate,
 											  isValidBeginReading = ReportingDalc.IsMeterReadingValidBeginReading(mr, CurrentReportingYear),
-											  isValidEndReading = ReportingDalc.IsMeterReadingValidEndReading(mr, CurrentReportingYear)
+											  isValidEndReading = ReportingDalc.IsMeterReadingValidEndReading(mr, CurrentReportingYear),
+                                              meterInstalltionReadingID = mr.MeterInstallationReadingId
 										  }).ToArray();
 					ret.meterReadings[miid] = container;
 				}
