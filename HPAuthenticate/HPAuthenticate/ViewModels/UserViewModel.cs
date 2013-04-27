@@ -146,6 +146,10 @@ namespace HPAuthenticate.ViewModels {
 
 		public List<PropertyAssociation> Properties { get { return User.Properties; } }
 
+        /// <summary>
+        /// by mjia: to decide whether users are able to see their properties according to their priviledge
+        /// </summary>
+        public bool AdminProperties { get; set; }
 
 		#region View Helpers
 

@@ -122,6 +122,9 @@ where
 			// Prepend an "initial reading", if it exists.
 			var readings = new List<MeterReading>();
 
+            // There is no contrain on number of readings anymore
+            limit = null;
+
 			readings.AddRange((from row in ExecuteDataTable(@"
 select " + (limit.HasValue ? "top " + limit.ToString() : "") + @"
 	mir.MeterInstallationReadingID,
@@ -133,6 +136,9 @@ select " + (limit.HasValue ? "top " + limit.ToString() : "") + @"
 	c_actual.DisplayName as ActualDisplayName,
 	Remarks,
 	GallonsPerMinute,
+    ReportingYear,
+    ReadingType,
+    IsSubmitted,
 	mi.Manufacturer,
 	mi.MeterModel,
 	mi.UnitId
@@ -145,7 +151,7 @@ left join Clients c_acting
 	on c_acting.ClientID = ActingUserId
 where
 	mir.MeterInstallationID = @mird
-	" + (year.HasValue ? "and ReadingDate between @firstDate and @lastDate": "") + @"
+	" + (year.HasValue ? "and ReportingYear = " + year.ToString() : "") + @"
 order by ReadingDate desc;", new Param("@mird", meterInstallationId),
 						   new Param("@firstDate", year.HasValue ? (object)new DateTime(year.Value - 1, 12, 15) : DBNull.Value),
 						   new Param("@lastDate", year.HasValue ? (object)new DateTime(year.Value + 1, 1, 15, 11, 59, 59) : DBNull.Value)).AsEnumerable()
@@ -159,54 +165,58 @@ order by ReadingDate desc;", new Param("@mird", meterInstallationId),
 						ActualUserId = row["ActualUserId"].ToInteger(),
 						ActualDisplayName = row["ActualDisplayName"].GetString(),
                         Rate = TryToDouble(row["GallonsPerMinute"]),
+                        IsSubmitted = TryToInt(row["IsSubmitted"]).HasValue ? TryToInt(row["IsSubmitted"]) : 0,
+                        ReportingYear = TryToInt(row["ReportingYear"]).HasValue ? TryToInt(row["ReportingYear"]) : 2012,
+                        ReadingType = TryToInt(row["ReadingType"]).HasValue ? TryToInt(row["ReadingType"]) : 2,
 					}));
 			
+            // Do not add initial readings in
 			// If we have a limit specified and the readings hit that count,
 			// then forget about loading the "initial" reading on the meter.
 			// Otherwise, add it to the list.
-			if (!limit.HasValue || readings.Count < limit.Value) {
-				var meter = new GisDalc().GetMeter(meterInstallationId);
-                Func<DateTime, int, bool> withinTimePeriod = (meterReadingDate, currentYear) => 
-                {
-                    var beginDate = new DateTime(currentYear - 1, 12, 15);
-                    var endDate = new DateTime(currentYear + 1, 1, 15, 11, 59, 59);
+            //if (!limit.HasValue || readings.Count < limit.Value) {
+            //    var meter = new GisDalc().GetMeter(meterInstallationId);
+            //    Func<DateTime, int, bool> withinTimePeriod = (meterReadingDate, currentYear) => 
+            //    {
+            //        var beginDate = new DateTime(currentYear - 1, 12, 15);
+            //        var endDate = new DateTime(currentYear + 1, 1, 15, 11, 59, 59);
 
-                    return (meterReadingDate <= endDate) && (meterReadingDate >= beginDate);
-                };
-				if (meter.InitialReading.HasValue && meter.read_date.HasValue && (!year.HasValue || (withinTimePeriod(meter.read_date.Value, year.Value)))) {
+            //        return (meterReadingDate <= endDate) && (meterReadingDate >= beginDate);
+            //    };
+            //    if (meter.InitialReading.HasValue && meter.read_date.HasValue && (!year.HasValue || (withinTimePeriod(meter.read_date.Value, year.Value)))) {
 
-					// This meter has an initial reading.
-					var udalc = new UserDalc();
-					var actingUser = udalc.GetUser(meter.ActingUserId);
-					var actualUser = udalc.GetUser(meter.ActualUserId);
+            //        // This meter has an initial reading.
+            //        var udalc = new UserDalc();
+            //        var actingUser = udalc.GetUser(meter.ActingUserId);
+            //        var actualUser = udalc.GetUser(meter.ActualUserId);
 
-                    var rateForNozzlePackage = new int?();
-                    if(meter.Model.Contains("Nozzle Package"))
-                        if(meter.Size != null && meter.Size != "")
-                            rateForNozzlePackage = Double.Parse(meter.Size).ToInteger();
-                        else
-                            rateForNozzlePackage = new int?();
-                    else
-                        rateForNozzlePackage = new int?();
+            //        var rateForNozzlePackage = new int?();
+            //        if(meter.Model.Contains("Nozzle Package"))
+            //            if(meter.Size != null && meter.Size != "")
+            //                rateForNozzlePackage = Double.Parse(meter.Size).ToInteger();
+            //            else
+            //                rateForNozzlePackage = new int?();
+            //        else
+            //            rateForNozzlePackage = new int?();
 
-					readings.Add(new MeterReading() {
-						ActingDisplayName = actingUser != null ? actingUser.DisplayName : "",
-						ActingUserId = meter.ActingUserId,
-						ActualDisplayName = actualUser != null ? actualUser.DisplayName : "",
-						ActualUserId = meter.ActualUserId,
-						DateTime = meter.read_date.Value,
-						MeterInstallationId = meter.MeterInstallationId,
-						MeterInstallationReadingId = 0, // This doesn't have a reading id because it's the initial reading
-                        Rate = rateForNozzlePackage,
-						Reading = (double)meter.InitialReading.Value
-					});
-				}
-			}
+            //        readings.Add(new MeterReading() {
+            //            ActingDisplayName = actingUser != null ? actingUser.DisplayName : "",
+            //            ActingUserId = meter.ActingUserId,
+            //            ActualDisplayName = actualUser != null ? actualUser.DisplayName : "",
+            //            ActualUserId = meter.ActualUserId,
+            //            DateTime = meter.read_date.Value,
+            //            MeterInstallationId = meter.MeterInstallationId,
+            //            MeterInstallationReadingId = 0, // This doesn't have a reading id because it's the initial reading
+            //            Rate = rateForNozzlePackage,
+            //            Reading = (double)meter.InitialReading.Value
+            //        });
+            //    }
+            //}
 
 			return readings;
 		}
 
-        // By Meng Jia
+        // By mjia
         private double? TryToDouble(object o) 
         {
             double ret;
@@ -219,6 +229,24 @@ order by ReadingDate desc;", new Param("@mird", meterInstallationId),
                 return ret;
             else
                 return new double?();
+        }
+
+        // By mjia
+        private int? TryToInt(object o)
+        {
+            if (o != null)
+            {
+                int num;
+                if (o is bool)
+                {
+                    return new int?(((bool)o) ? 1 : 0);
+                }
+                if (int.TryParse(o.ToString(), out num))
+                {
+                    return new int?(num);
+                }
+            }
+            return null;
         }
 
 		public IEnumerable<MeterReading> GetReadings(int meterInstallationId, int year) {
@@ -281,29 +309,6 @@ when matched then
 		public bool SaveMeterReading(MeterReading reading, out string errorMessage) {
 			errorMessage = "";
 			try {
-				/*ExecuteNonQuery(@"
-insert into MeterInstallationReadings (
-	MeterInstallationID,
-	ReadingDate,
-	Reading,
-	ActingUserId,
-	ActualUserId,
-	GallonsPerMinute
-) values (
-	@installationId,
-	@date,
-	@reading,
-	@actingUserId,
-	@actualUserId,
-	@gpm
-);",
-					new Param("@installationId", reading.MeterInstallationId),
-					new Param("@date", reading.Date),
-					new Param("@reading", reading.Reading.HasValue ? (object)reading.Reading.Value : DBNull.Value),
-					new Param("@actingUserId", reading.ActingUserId),
-					new Param("@actualUserId", reading.ActualUserId),
-					new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value)
-				);*/
                 ExecuteNonQuery(@"
 merge MeterInstallationReadings as target
 using (
@@ -347,13 +352,113 @@ when matched then
                     new Param("@actingUserId", reading.ActingUserId),
                     new Param("@actualUserId", reading.ActualUserId),
                     new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value));
-			} catch (Exception ex) {
-				errorMessage = ex.Message;
-				return false;
-			}
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                return false;
+            }
 
 			return true;
 		}
+
+        /// <summary>
+        /// Streamline reading function
+        /// </summary>
+        /// <param name="adds">Add reading objects</param>
+        /// <param name="deletes">A string array of meter installation reading IDs</param>
+        /// <param name="errorMessage"></param>
+        /// <returns></returns>
+        public bool ApplyReadingEdits(MeterReading[] adds, string[] deletes, out string errorMessage)
+        {
+            errorMessage = "";
+            try
+            {
+                if (adds.Length > 0)
+                {
+                    foreach (MeterReading reading in adds)
+                    {
+                        ExecuteNonQuery(@"
+merge MeterInstallationReadings as target
+using (
+    select 
+        @installationId as installationId, 
+        @date as date,
+        @reading as reading,
+        @actingUserId as actingUserId,
+        @actualUserId as actualUserId,
+        @gpm as gpm,
+        @readingType as readingType,
+        @isSubmitted as isSubmitted,
+        @reportingYear as reportingYear
+) as source on (
+    target.MeterInstallationID = source.installationId
+    and target.ReadingDate = source.date
+    and target.Reading = source.reading
+    and target.ActingUserId = source.actingUserId
+    and target.ActualUserId = source.actualUserId
+    and target.ReadingType = source.readingType
+    and target.IsSubmitted = source.isSubmitted
+    and target.ReportingYear = source.reportingYear
+)
+when not matched then
+    insert (
+        MeterInstallationID,
+        ReadingDate,
+        Reading,
+        ActingUserId,
+        ActualUserId,
+        GallonsPerMinute,
+        ReadingType,
+        IsSubmitted,
+        ReportingYear
+    ) values (
+        source.installationId,
+        source.date,
+        source.reading,
+        source.actingUserId,
+        source.actualUserId,
+        source.gpm,
+        source.readingType,
+        source.isSubmitted,
+        source.reportingYear
+    )
+when matched then
+    update set
+        MeterInstallationID = source.installationId;
+",
+                    new Param("@installationId", reading.MeterInstallationId),
+                    new Param("@date", reading.Date),
+                    new Param("@reading", reading.Reading.HasValue ? (object)reading.Reading.Value : DBNull.Value),
+                    new Param("@actingUserId", reading.ActingUserId),
+                    new Param("@actualUserId", reading.ActualUserId),
+                    new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value),
+                    new Param("@readingType", reading.ReadingType),
+                    new Param("@isSubmitted", reading.IsSubmitted),
+                    new Param("@reportingYear", reading.ReportingYear));
+                    }
+                }
+                StringBuilder builder = new StringBuilder(" (");
+                if (deletes.Length > 0)
+                {
+                    foreach (string str in deletes)
+                    {
+                        builder.Append(str + ", ");
+                    }
+                    builder.Remove(builder.Length - 2, 2);
+                    builder.Append(")");
+                    ExecuteNonQuery(@"
+delete from MeterInstallationReadings where MeterInstallationReadingID in " + builder.ToString()
+                                                                            );
+                }
+            }
+            catch (Exception exception)
+            {
+                errorMessage = exception.Message;
+                return false;
+            }
+            return true;
+        }
 
 		/// <summary>
 		/// Gets volumes as calculated or user-revised for meters that have had

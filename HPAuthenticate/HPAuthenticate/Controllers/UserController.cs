@@ -298,7 +298,18 @@ HPWD Staff";
 
 
 		public ActionResult Details() {
-			return View(new UserViewModel(ActingUser, UserEditMode.edit));
+			//return View(new UserViewModel(ActingUser, UserEditMode.edit));
+
+            UserViewModel model = new UserViewModel(ActingUser, UserEditMode.edit);
+            if (ActualUser.IsAdmin)
+            {
+                model.AdminProperties = true;
+            }
+            else
+            {
+                model.AdminProperties = false;
+            }
+            return View(model);
 		}
 
 		[HttpPost]

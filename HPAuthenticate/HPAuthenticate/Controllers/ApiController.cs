@@ -6,11 +6,13 @@ using System.Web.Mvc;
 using HPEntities.Dalcs;
 using System.Web.Security;
 using HPEntities.Entities;
+using HPEntities.Entities.JsonClasses;
 using HPEntities;
 using HPEntities.Entities.Enums;
 using libMatt.Formatters;
 using libMatt.Converters;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace HPAuthenticate.Controllers {
 	public class ApiController : ApplicationController {
@@ -327,6 +329,53 @@ namespace HPAuthenticate.Controllers {
 
 			return Json(new JsonResponse(success, error));
 		}
+
+        /// <summary>
+        /// Save "adds" and "deletes" to support streamline meter reading
+        /// </summary>
+        /// <param name="authTicket"></param>
+        /// <param name="actingUserId"></param>
+        /// <param name="actualUserId"></param>
+        /// <param name="addsAndDeletes"></param>
+        /// <returns></returns>
+        public JsonResult ApplyReadingEdits(string authTicket, int actingUserId, int actualUserId, string addsAndDeletes)
+        {
+            int num;
+            User userFromAuthTicket = this.GetUserFromAuthTicket(authTicket);
+            if (userFromAuthTicket == null)
+            {
+                return base.Json(new JsonResponse(false, new string[] { "Invalid authentication ticket - no user found." }));
+            }
+            if (userFromAuthTicket.Id != actualUserId)
+            {
+                return base.Json(new JsonResponse(false, new string[] { "Unauthorized action: The specified authentication ticket does not match the provided actual user ID." }));
+            }
+            if (!((actingUserId == actualUserId) || userFromAuthTicket.IsAdmin))
+            {
+                return base.Json(new JsonResponse(false, new string[] { "Unauthorized action: You do not have permission to act for that user." }));
+            }
+            JsonApplyMeterReadingsObject obj2 = JsonConvert.DeserializeObject<JsonApplyMeterReadingsObject>(addsAndDeletes);
+            string errorMessage = "";
+            MeterReading[] adds = new MeterReading[obj2.adds.Length];
+            string[] deletes = new string[obj2.deletes.Length];
+            if (obj2.adds.Length > 0)
+            {
+                for (num = 0; num < adds.Length; num++)
+                {
+                    JsonFlexMeterReadingObject obj3 = obj2.adds[num];
+                    adds[num] = new MeterReading { MeterInstallationId = int.Parse(obj3.MeterInstallationID), DateTime = obj3.ReadingDateJson, Reading = obj3.ReadingValue, ActingUserId = actingUserId, ActualUserId = actualUserId, Rate = obj3.GallonsPerMinute, ReadingType = new int?(obj3.ReadingType), IsSubmitted = new int?(obj3.IsSubmitted), ReportingYear = new int?(obj3.ReportingYear) };
+                }
+            }
+            if (obj2.deletes.Length > 0)
+            {
+                for (num = 0; num < deletes.Length; num++)
+                {
+                    deletes[num] = obj2.deletes[num].MeterInstallationReadingID;
+                }
+            }
+            bool success = new MeterDalc().ApplyReadingEdits(adds, deletes, out errorMessage);
+            return base.Json(new JsonResponse(success, new string[] { errorMessage }));
+        }
 
 
 		/// <summary>

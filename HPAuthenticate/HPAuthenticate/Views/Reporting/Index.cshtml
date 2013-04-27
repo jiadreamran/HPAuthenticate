@@ -13,9 +13,9 @@
 	console.debug = console.debug || function() {};
 
 	var config = {
-		isCafoDeployed: /(true|1)/i.test('@ViewBag.IsCafoDeployed'),
-		isEcfDeployed: /(true|1)/i.test('@ViewBag.IsEcfDeployed')
+		isCafoDeployed: false
 	};
+
 
 	var util = (function() {
 		return {
@@ -36,6 +36,10 @@
 		var _meterUnitConversionFactors = @Html.Raw(Model.meterUnitConversionFactors);
 		var _state = @Html.Raw(Model.pageState);
 
+        // OK here is a test by Meng
+        var _unitConversionFactorsForGallon = {1: 0.00000306888328, 2: 0.00003682659933, 3: 1};
+
+
 		var Classes = (function() {
 			return {
 				CalculatedVolume: Class.extend({
@@ -46,9 +50,7 @@
 					},
 					volume: 0,
 					unitId: 3, // HARDCODED: Unit identifier, gallons == 3
-                    runningTotal: 0, // Meng: runningTotal in inputed unit for each meter
-					rolloverOccurred: false,
-					fakedEndReading: false
+					rolloverOccurred: false
 				}),
 				MeterReading: Class.extend({
 					init: function(reading, rate, unitId) {
@@ -90,6 +92,12 @@
                         this._super(message);
                         this.name = 'NoBeginReadingException';
                     }
+                }),
+                NoEndReadingException: Exception.extend({
+                    init: function(message){
+                        this._super(message);
+                        this.name = 'NoEndReadingException';
+                    }
                 })
 			};
 
@@ -117,17 +125,14 @@
 		/// readings, also taking into consideration
 		/// rate changes in middle readings and rollover
 		/// values.
-		function _calculateVolume(readingContainer, ca, meterInstallationId) {
-            //console.debug("readingContainer: ", readingContainer);
-			var isNozzlePackage = readingContainer.isNozzlePackage;
-			var readings = readingContainer.readings;
+		function _calculateVolume(isNozzlePackage, rolloverValue, county, countyId, meterType, unitId, nonStandardUnits, meterMultiplier, readings, ca) {
 			if (typeOf(readings) != 'array' || readings.length < (isNozzlePackage ? 1 : 2)) {
-                throw new Errors.NoReadingsException('There are not enough readings on this meter to calculate a volume.');
+                console.debug("Not enough readings in the raw reading array!");
+                _notEnoughReadings.push(true);
+				throw new Errors.NoReadingsException();
 			}
-
-			// The CalculatedVolume object we will be returning.
-			var ret = new Classes.CalculatedVolume();
-
+            //console.debug("readings: ", readings);
+            console.debug("nonStandardUnits: ", nonStandardUnits); // mjia: if it is a water meter, the nonStandardUnits will be blank
 			// There are some readings, but maybe not all of them are valid for
 			// calculating volume. (The dates have to fall within particular ranges.)
 			// Happily, the middleware figures this out for us; we just have to
@@ -140,7 +145,8 @@
 						validReadings.push(readings[i]);
 					}
 				}
-
+                console.debug("valid readings: ", readings);
+                //***************************************************************************************************************
                 // Meng
                 // If the number of valid readings is 0, then the entire reading set is not valid, no need to deal with this case
                 if(validReadings.length < 1)
@@ -149,11 +155,7 @@
                 }
                 else if(validReadings.length == 1)
                 {
-                	/* MWinckler.20130202: This is written for the CA level, but this is the
-                		meter level - this 
-                	// Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
                     ca.isFakingValidReadings = false;
-                    */
                     // If the only valid begin reading is the last reading, then the entire reading set is not valid
                     if(validReadings[0].reading == readings[readings.length - 1].reading)
                     {
@@ -162,42 +164,64 @@
                     else
                     {
                         // Use the last reading as the valid end reading
-                        //throw new Errors.NoReadingsException();
-                        ret.fakedEndReading = true;
-                        validReadings.push(readings[readings.length - 1]);
+                        if(validReadings[0].isValidBeginReading)
+                            throw new Errors.NoEndReadingException();
+                        else if(validReadings[0].isValidEndReading)
+                            throw new Errors.NoBeginReadingException();
+                        //ca.isFakingValidReadings = true;
+                        //validReadings.push(readings[readings.length - 1]);
                     }
                 }
                 readings = validReadings;
+                //console.debug("valid readings: ", readings);
+                //***************************************************************************************************************
+
+                console.debug("valid readings: ", readings);
+                var hasBeginReadingThisMeter = false;
+                // Check if there is a begin reading
+                for(var i = 0; i < readings.length; i++){
+                    if(readings[i].isValidBeginReading){
+                        hasBeginReadingThisMeter = true;
+                    }
+                }
+                _hasBeginReading.push(hasBeginReadingThisMeter);
+                if(!hasBeginReadingThisMeter){
+                    throw new Errors.NoBeginReadingException();
+                }
+
+                var hasEndReadingThisMeter = false;
+                for(var i = 0; i < readings.length; i++)
+                {
+                    if(readings[i].isValidEndReading)
+                        hasEndReadingThisMeter = true;
+                }
+                _hasEndReading.push(hasEndReadingThisMeter);
+                if(!hasEndReadingThisMeter){
+                    throw new Errors.NoEndReadingException();
+                }
+
+                //console.debug("Has begin reading?: ", hasBeginReadingThisMeter);               
 			}
 
 			// At this point, if we don't have enough readings, throw an exception
 			// and warn the user.
             var notEnoughReadings = false;
 			if (readings.length < (isNozzlePackage ? 1 : 2)) {
+                _notEnoughReadings.push(true);
 				throw new Errors.NoReadingsException();
 			}
 
-            var hasBeginReading = false;
-            // Check if there is a begin reading
-            for(var i = 0; i < readings.length; i++){
-                if(readings[i].isValidBeginReading){
-                    hasBeginReading = true;
-                }
-            }
-
-            if(!hasBeginReading){
-                throw new Errors.NoBeginReadingException();
-            }
-
 			if (rolloverValue <= 0) {
-				throw new Errors.InvalidRolloverException('Unable to calculate volume; meter rollover value ("' + rolloverValue + '") is not valid.');
+                // mjia: add check point on rollover value: the readings should be increasing if rollover value is not used:
+                //if()
+				//throw new Errors.InvalidRolloverException('Unable to calculate volume; meter rollover value ("' + rolloverValue + '") is not valid.');
 			}
 
-			var prevReading = new Classes.MeterReading(readings[0].reading, readings[0].rate, readings[0].unitId);
+			var prevReading = new Classes.MeterReading(readings[0].reading, readings[0].rate, unitId);
 			var runningTotal = 0;
-			var rolloverValue = readingContainer.rolloverValue || 0;
 			var i = 1;
 			var delta = 0;
+			var ret = new Classes.CalculatedVolume();
 			if (isNozzlePackage) {
 				// HARDCODED: Convert GPH to GPM by *60
 				runningTotal = prevReading.reading * prevReading.rate * 60;
@@ -205,7 +229,7 @@
 			}
 
 			while (i < readings.length) {
-				var currentReading = new Classes.MeterReading(readings[i].reading, readings[i].rate, readings[i].unitId);
+				var currentReading = new Classes.MeterReading(readings[i].reading, readings[i].rate, unitId);
 				// If the meter is a nozzle package, we multiple the reading by rate and sum them.
 				// Else, we calculate a delta between this and the previous reading.
 				if (isNozzlePackage) {
@@ -229,44 +253,29 @@
 
 			ret.unitId = currentReading.unitId;
 
-            ret.runningTotal = runningTotal;
+			if (!isNozzlePackage && meterType.toLowerCase() !== 'water meter') {
+				var countyId = countyId;
+				//console.debug('applying nonstandard unit conversion for ' + nonStandardUnits);
+				//console.debug('multiplier: ' + (_meterUnitConversionFactors[countyId][nonStandardUnits.toLowerCase()] || 1));
+				//console.debug('running total before: ' + runningTotal);
+				// Convert meter units as necessary - this will put runningTotal into ac-in.
+				runningTotal *= (_meterUnitConversionFactors[countyId][nonStandardUnits.toLowerCase()] || 1);
+				//console.debug('running total after: ' + runningTotal);
 
-            // Now this case can be used for electric, natural gas and third party
-			if (!readingContainer.isNozzlePackage && (readingContainer.isNaturalGas || readingContainer.isElectric || readingContainer.isThirdParty)) {
+				// Convert running total from ac-in to gallons.
+				// HARDCODED - unit IDs!
+				runningTotal *= _unitConversionFactors[2][3]
+				//console.debug('running total after ac-in to gal: ' + runningTotal);
 
-                if(config.isEcfDeployed && (readingContainer.isNaturalGas || readingContainer.isElectric)) {
-                	// Apply squeeze value.
-                    var squeezeValue = readingContainer.squeezeValue || 0;
-
-                    // mjia: update squeeze value of this meter installation
-                    ca.meterReadings[meterInstallationId].squeezeValue = squeezeValue;
-
-                    var baseLift = readingContainer.depthToRedbed - 20;
-                    var adjLift = baseLift + squeezeValue * 2.3076;
-                    var ecf = readingContainer.isElectric
-                    			? adjLift / 0.462 * 0.085241556 // electric
-                    			: adjLift / 0.1325 * 0.000289205; // nat gas
-                    runningTotal = runningTotal / ecf;
-
-                } else {
-				    // Convert meter units as necessary - this will put runningTotal into ac-in.
-				    runningTotal *= (_meterUnitConversionFactors[readingContainer.countyId][readingContainer.nonStandardUnits.toLowerCase()] || 1);
-
-                }
-
-                // Convert running total from ac-in to gallons.
-			    // HARDCODED - unit IDs!
-			    runningTotal *= _unitConversionFactors[2][3];
 				ret.unitId = 3; // HARDCODED: Unit identifier, gallons == 3
 			}
 
-			// HARDCODED: meter type
-			var multiplier = (readingContainer.meterType.toLowerCase() == 'water meter' ? readingContainer.multiplier : 1);
-
+			var multiplier = (meterType.toLowerCase() == 'water meter' ? meterMultiplier : 1);
+            //console.debug('Multiplier: ' + multiplier);
             multiplier = multiplier == 0 ? 1 : multiplier;
+            //console.debug('Revised multiplier: ' + multiplier);
 
 			ret.volume = runningTotal * multiplier;
-            ret.meterInstallationId = meterInstallationId;
 			return ret;
 
 		};
@@ -274,15 +283,11 @@
 		/// Returns a jQuery object of a select box
 		/// with yes/no options for accepting/denying
 		/// the calculated volume reading
-		/// Duck typing - required fields
-		///		caObj.number - used for identification strings
-		///		readingObj.id - used for identification strings
-		///		readingObj.acceptCalculation - indicates default selected value
 		function _getAcceptanceDropdown(caObj, readingObj) {
 			var sel = $('<select></select>')
 						.addClass('user_acceptance')
-						.attr('name', "user_acceptance_" + caObj.number + '_' + readingObj.id)
-						.attr('id', "user_acceptance_" + caObj.number + '_' + readingObj.id)
+						.attr('name', "user_acceptance_" + caObj.number + '_' + readingObj.meterInstallationId)
+						.attr('id', "user_acceptance_" + caObj.number + '_' + readingObj.meterInstallationId)
 						.append(
 							$('<option value="1" ' + (readingObj.acceptCalculation ? 'selected="selected"' : '') + '></option').text('Yes')
 						).append(
@@ -290,57 +295,55 @@
 						).change(function() {
 							if ($(this).val() == 1) {
 								$(this).nextAll('div.user_revised_vol').hide();
+								//_recalculateTotalVolume(caObj, readingObj.meterInstallationId);
 							} else {
 								$(this).nextAll('div.user_revised_vol').show().find(':text').focus().select();
 							}
-							var tr = $(this).closest('tr');
+							var tr = $(this).closest('tr.meter_usage_row');
 							// Update the boolean indicating whether to accept the calculation
-							tr.data('readingContainer').acceptCalculation = $(this).val() == 1;
+							tr.data('meterReading').acceptCalculation = $(this).val() == 1;
 							tr.data('updateVolume')();
-						}).data('contigAcres', caObj).data('miid', readingObj.id)
+						}).data('contigAcres', caObj).data('miid', readingObj.meterInstallationId)
 
 			return sel;
+
 		};
 
 
-		/// caObj - required fields: "number" (used in section identifiers)
-		/// readingObj - required fields: "id" (used in section identifiers), 
-		///				"userRevisedVolume" (optional int; if present, prepopulates user rev vol textbox),
-		///				"acceptCalculation" (optional bool; if present, used to show/hide section)
 		function _getUserRevisedVolSection(caObj, readingObj) {
-			var sectionIdentifier = caObj.number + '_' + readingObj.id;
+			var sectionIdentifier = caObj.number + '_' + readingObj.meterInstallationId;
 			var unitDropdown = _getUnitDropdown("user_revised_vol_units_" + sectionIdentifier, 'gallons');
+			var trInFunc;
 			unitDropdown.change(function() {
-				var tr = $(this).closest('tr');
+				var tr = $(this).closest('tr.meter_usage_row');
 				// Update the relevant property on the parent contiguous acres object
 				tr.data('updateVolume')();
+				
+				// Update the associated meterReading object
+				tr.data('meterReading').userRevisedVolumeUnitId = $(this).val();
 
-				// Update the associated readingContainer object
-				tr.data('readingContainer').userRevisedVolumeUnitId = $(this).val();
-
-			}).addClass('user_revised_vol_units');
+			});
 			var txt = $('<input type="text" name="user_revised_vol_' + sectionIdentifier + '"></input>')
 						.attr('id', 'user_revised_vol_' + sectionIdentifier)
-						.addClass('user_revised_vol')
 						.blur(function() { 
 							// Ensure that this value is an integer.
-							if ($(this).val().match(/^[0-9]+$/) === null) {
+							if($(this).val().match(/^[0-9]+$/) === null) {
 								$(this).addClass('error');
 								$(this).attr('title', 'Please enter an integer value.').tipsy({gravity: 's', trigger:'manual'}).tipsy('show');
 								return;
 							} else {
 								$(this).removeClass('error').tipsy('hide');
 							}
-							var tr = $(this).closest('tr');
-							tr.data('readingContainer').userRevisedVolume = parseInt($(this).val());
-							tr.data('readingContainer').userRevisedVolumeUnitId = unitDropdown.val();
-                            readingObj.userRevisedVolume = parseInt($(this).val());
-                            readingObj.userRevisedVolumeUnitId = unitDropdown.val();
-                            console.debug(readingObj);
+							var tr = $(this).closest('tr.meter_usage_row');
+							tr.data('meterReading').userRevisedVolume = parseInt($(this).val());
+							tr.data('meterReading').userRevisedVolumeUnitId = unitDropdown.val();
 							tr.data('updateVolume')();
 						})
 						.addClass('short')
 						.val(readingObj.userRevisedVolume || 0);
+			//console.debug("readingObj: ", readingObj);
+			//unitDropdown.val = readingObj.userRevisedVolumeUnitId;
+			//unitDropdown.val(readingObj.userRevisedVolumeUnitId).change();
 			var div = $('<div><div>').addClass('user_revised_vol')
 									.append($('<label></label>').text('Revised Volume:').append(txt))
 									.append($('<label></label>').text('Units:').append(unitDropdown));
@@ -353,32 +356,21 @@
 		function _getUnitDropdown(name, selectedVal) {
 			var sel = $('<select></select>').attr('name', name).attr('id', name);
 			for (var unitId in _state.unitDefinitions) {
-				// HARDCODED
+				// HARDCODE
 				// Warning - note hardcoded unit identifier 3 to default select Gallons
+                console.debug("_state.unitDefinitions", _state.unitDefinitions);
 				sel.append('<option value="' + unitId + '"' + (unitId == 3 ? 'selected="selected"' : '') + '>' + _state.unitDefinitions[unitId] + '</option>');
 			}
 
 			return sel;
 		};
 
-        function _getSqueezeInputBox(name, defaultSqueezeValue)
-        {
-            return $('<input type="text" style="width: 70px"></input>')
-            		.attr('name', name)
-            		.attr('id', name)
-            		.val(defaultSqueezeValue)
-					.on('change', 
-		                function() {
-		                	// This should only need to store the current textbox value
-                        	// in the row's reading container, then call for a volume
-                        	// recalculation.
-                        	$(this).closest('tr').data('readingContainer').squeezeValue = parseInt($(this).val()) || 0;
-                        	$(this).closest('tr').data('updateVolume')();
+		/// Sets the total volume value of the relevant column for the
+		/// specified meterInstallationId.
+		function _recalculateTotalVolume(contigAcres, meterInstallationId) {
+			// Moved to tr.data('updateVolume')
 
-                        	// Index.cshtml:748+ did a bunch of other stuff here,
-                        	// all of which should be already handled by the updateVolume call.
-		                });
-        }
+		};
 
         function _isTimePeriodValid() {
 			var today = new Date();
@@ -403,21 +395,70 @@
             return ret;
 		};
 
+        var _isFakingValidReadings = false; // Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
+        var _userRevisedVolume = false; // If the user does not accept the calculated volume, this variable (if true) indiates that he is using his own calculation. When submitting the report, if this value is true, it will not check whether the readings are valid.
+        var _hasBeginReading = [];
+        var _hasEndReading = [];
+        var _miscReportDisable; // Used to disable the submit button when there is an error
+        var _notEnoughReadings = [];
+        var _notEnoughReadingsAllMeters = false;
         
         // Two cases where the submit button will get disabled:
         // 1) One of the meters does not have a valid begin reading
         // 2) It is not reporting period and the user is not an admin
-        function _canSubmit(ca)
+        function _isSubmitDisabled(ca)
         {
             var allowed = reportingSummary.state.isReportingAllowed;
             var admin = reportingSummary.state.adminOverride;
             var ret;
+            //$('#user_revised_vol_units_' + ca.number + '_' + miid)
+            var hasValidBeginReadings = true;
+            var hasValidEndReadings = true;
+
+            for(var i = 0; i < _hasBeginReading.length; i++){
+                var hasBeginReadingThisMeter = _hasBeginReading[i];
+                //console.debug("This meter has a valid begin reading: ", hasBeginReadingThisMeter)
+                if(!hasBeginReadingThisMeter)
+                {
+                    hasValidBeginReadings = false;
+                    break;
+                }
+            }
+            ca.hasValidBeginReadings = hasValidBeginReadings;
+
+            for(var i = 0; i < _hasEndReading.length; i++){
+                var hasEndReadingThisMeter = _hasEndReading[i];
+                //console.debug("This meter has a valid begin reading: ", hasBeginReadingThisMeter)
+                if(!hasEndReadingThisMeter)
+                {
+                    hasValidEndReadings = false;
+                    break;
+                }
+            }
+
+            // This is just a part to decide whether the readings are enough for all the meters, it will change _notEnoughtReadingsAllMeters,
+            // but it will NOT disable the submit button
+            for(var i = 0; i < _notEnoughReadings.length; i++){
+                var notEnoughReadingsThisMeter = _notEnoughReadings[i];
+                if(notEnoughReadingsThisMeter)
+                {
+                    _notEnoughReadingsAllMeters = true;
+                    break;
+                }
+            }
+
+            //console.debug("All meters are having a valid begin reading: ", hasValidBeginReadings)
+            //console.debug("All meters are having enough readings?: ", !_notEnoughReadingsAllMeters)
+            ca.notEnoughReadingsForAllMeters = _notEnoughReadingsAllMeters;
 
             if(allowed == false && admin == false)
                 ret = true;
+            //else if(!hasValidBeginReadings)
+            //    ret = true;
             else
                 ret = false;
 
+            console.debug("Is submit button disabled: ", ret)
             return ret;
         };
 
@@ -458,7 +499,6 @@
 							.attr('name', 'error_response')
 							.val(errorData.responses[i].hpwd)
 							.data('user_response', errorData.responses[i].user)
-							.data('error_response_object', errorData.responses[i])
 							.click((function(resp) {
 								return function() {
 									$('#error_hpwd_response').text(resp);
@@ -471,7 +511,7 @@
 			var validationErrors = $('<p></p>').addClass('error');
 
 			var dlg = $('<div></div>').addClass('error_dialog').append(
-				$('<h2>Well/Meter Validation: User Input Required</h2>')
+				$('<h2>Well/Meter Validation Error</h2>')
 			).append(
 				$('<p></p>').css('font-weight', 'bold').text(msg)
 			).append(
@@ -483,8 +523,7 @@
 			).append(
 				$('<input type="button"></input>').addClass('submit-btn').attr('disabled', 'disabled').val('Submit').click(function() {
 					// Verify option was chosen
-					var selectedVal = $(this).closest('.error_dialog').find('input[name="error_response"]:checked').data('error_response_object');
-
+					var selectedVal = $(this).closest('.error_dialog').find('input[name="error_response"]:checked').data('user_response');
 					if (selectedVal === undefined || selectedVal === null) {
 						validationErrors.text('Please select a response first.').show();
 						return false;
@@ -510,13 +549,14 @@
 			$(dlg).modal();
 		};
 
+
 		function _submitCA(contigAcres, callback) {
 			var dto = { "state" : JSON.stringify(_state), "ca": JSON.stringify(contigAcres) };
 			var statusP = $('#submittal_status_' + contigAcres.number);
-            console.debug("contigAcres: ", contigAcres);
 			statusP.removeClass().addClass('ajax_loading').text('Submitting...').show();
+			console.debug("contigAcres: ", contigAcres);
 			$.ajax(
-				"@Url.Action("SubmitUsageReport", "Reporting")",
+				'Reporting/SubmitUsageReport',
 				{
 					type: 'POST',
 					data: dto,
@@ -539,6 +579,7 @@
 
 					},
 					error: function(jqXHR, textStatus, errorThrown) {
+                        console.debug(jqXHR, textStatus, errorThrown);
 						statusP.show().addClass('error').text('A server error occurred while trying to submit the usage report: ' + errorThrown);
 					},
 					complete: function(jqXHR, textStatus) {
@@ -549,647 +590,188 @@
 
 		};
 
-		function _updateCalculatedVolume(readingContainer, calcVolTd, ca, meterInstallationId) {			
-			var calcVol = null;
-            //var calcCount = 0;
-            //console.debug("Line number: ", lineNum);
-			function setCalcVolTdError(msg) {
-				// Present a warning icon to the user
-				calcVolTd.addClass('warning');
-				calcVolTd.attr('title', msg);
-				$(calcVolTd).ready(function() {
-					$(calcVolTd).tipsy({ gravity: 's'});
-				});
-			}
-            
-			try {
-                //calcCount++;
-				calcVol = _calculateVolume(readingContainer, ca, meterInstallationId);
+        function _cleanCAIndicationVariables()
+        {
+            _isFakingValidReadings = false; // Fake readings override to show calculated volume even if the readings are not valid. But do not allow submit
+            _userRevisedVolume = false; // If the user does not accept the calculated volume, this variable (if true) indiates that he is using his own calculation. When submitting the report, if this value is true, it will not check whether the readings are valid.
+            _hasBeginReading = [];
+            _miscReportDisable; // Used to disable the submit button when there is an error
+            _notEnoughReadings = [];
+            _notEnoughReadingsAllMeters = false;
+        };
 
-				calcVolTd.text(util.round(calcVol.volume));
-				if (calcVol.rolloverOccurred) {
-					setCalcVolTdError('It appears a meter rollover occurred; calculated volume is based on an assumed rollover value of '+ readingContainer.rolloverValue + ' for this meter.');
-				}
-				if (calcVol.fakedEndReading) {
-					// There wasn't a valid end reading, so we faked one to
-					// show approximate volume. The user won't be able to submit
-					// this CA without overriding this calculated value with a
-					// user-entered volume.
-					setCalcVolTdError('This meter did not have a valid end reading; the calculated volume is estimated based on other readings and must be overridden with a user-revised volume before submittal.');
-	
-                }			
-			} catch (e) {
-				calcVol = new Classes.CalculatedVolume();
-				if (e.name == 'NoReadingsException') {
-					// Show an error indicating there were no readings for this meter
-					calcVol.volume = 0;
-					calcVolTd.text("0").addClass('warning')
-							.attr('title', 'Fewer than 2 valid readings were found! Unable to calculate volume. (Note: readings outside Dec. 15-Jan. 15 cannot be used to calculate volume.)')
-							.ready(function() { 
-								$(calcVolTd).tipsy({gravity: 's'});
+		return {
+			selectedYear: -1,
+			showErrorDialog: function(errorId, wellNumber, meterInstallationId, callback) {
+				_showErrorDialog(errorId, wellNumber, meterInstallationId, callback);
+			},
+			getAnnualUsageTable: function(contigAcres, isEditable) {
+				// Note: store a reference to contigAcres on this reporting container so that
+				// child elements can update properties as necessary (i.e. user reported volume, etc.)
+
+                //*****************************************************************************************************************
+                // Here is my logic to clean the CA-specific indication variables (all have begin readings, enough readings, etc.)
+                //*****************************************************************************************************************
+                _cleanCAIndicationVariables();
+                //console.debug("CA at the very begining: ", contigAcres);
+
+				var container = $('<div></div>').addClass('reporting_container').data('contigAcres', contigAcres);
+				var table = $('<table><thead><tr><th>Meter #</th><th>County</th><th>Begin Reading(s)</th><th>Ending Reading</th><th>Reading Units</th><th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th><th>Total Volume (acre-in)</th></tr></thead></table>');
+				table.addClass('annual_usage');
+				var tbody = $('<tbody></tbody>');
+
+				for (var meterInstallationId in contigAcres.meterReadings) {
+					// This is unfortunate for readability, but a closure is
+					// required here to send the correct readings for calculated
+
+					reading = contigAcres.meterReadings[meterInstallationId];
+					//console.debug('whaaat...reading', meterInstallationId, contigAcres.meterReadings[meterInstallationId], reading);
+                    console.debug("reading: ", reading);
+                    if(reading.userRevisedVolumeUnitId)
+                    {
+					    iniConversionFactor = _unitConversionFactors[reading.userRevisedVolumeUnitId][3]; // mjia: always convert the readings to gallon since the "getUnitDropdown" function used later is hardcoded
+					    reading.userRevisedVolume = parseInt(reading.userRevisedVolume * iniConversionFactor);
+                    }
+
+					// TODO: if the meter doesn't exist anymore (was deleted), then we have no way to tell
+					// whether it was a nozzle package or not. Have to figure out a way around this somehow.
+					// May need to store nozzle package status on the meter reading itself
+					var isNozzlePackage = reading.isNozzlePackage; //(meter ? meter.meterType.toLowerCase() === 'nozzle package' : false);
+
+					// Construct the Begin readings. The last value in the readings collection
+					// will be the ending reading.
+					var beginReadings = [];
+					var readingUnitId = reading.unitId;
+					for (var i = 0; i < reading.readings.length; i++) {
+						var r = reading.readings[i];
+						beginReadings.push(r.reading + (r.rate ? " @@ " + r.rate + ' gpm' : ''));
+
+					}
+					var endingReading = (isNozzlePackage ? null : beginReadings.pop());
+
+					var calcVol = null;
+					var calcVolTd = $('<td></td>');
+					try {
+                        //console.debug("Raw reading: ", reading);
+						calcVol = _calculateVolume(reading.isNozzlePackage, reading.rolloverValue, reading.county, reading.countyId, reading.meterType, reading.unitId, reading.nonStandardUnits, reading.meterMultiplier, reading.readings, contigAcres);
+						calcVolTd.text(util.round(calcVol.volume));
+						if (calcVol.rolloverOccurred) {
+							// Present a warning icon to the user
+							calcVolTd.addClass('warning');
+							calcVolTd.attr('title', 'It appears a meter rollover occurred; calculated volume is based on an assumed rollover value of ' + reading.rolloverValue + ' for this meter.');
+							$(calcVolTd).ready(function() {
+								$(calcVolTd).tipsy({ gravity: 's'});
 							});
-				} else if (e.name == 'InvalidRolloverException') {
-					calcVol.volume = 0;
-					calcVolTd.text("0").addClass('warning')
-							.attr('title', e.message)
-							.ready(function() {
-								$(calcVolTd).tipsy({gravity: 's'});
-							});
-				} else if (e.name == 'NoBeginReadingException') {
+						}					
+					} catch (e) {
+						calcVol = new Classes.CalculatedVolume();
+						if (e.name == 'NoReadingsException') {
+							// Show an error indicating there were no readings for this meter
+							calcVol.volume = 0;
+							calcVolTd.text("0").addClass('warning')
+									.attr('title', 'Fewer than 2 valid readings were found for this meter! Unable to calculate volume. (Note: readings outside Dec. 15-Jan. 15 cannot be used to calculate volume.)')
+									.ready(function() { 
+										$(calcVolTd).tipsy({gravity: 's'});
+									});
+						} else if (e.name == 'InvalidRolloverException') {
+							calcVol.volume = 0;
+							calcVolTd.text("0").addClass('warning')
+									.attr('title', e.message)
+									.ready(function() {
+										$(calcVolTd).tipsy({gravity: 's'});
+									});
+						} else if (e.name == 'NoBeginReadingException') {
 							calcVol.volume = 0;
 							calcVolTd.text("0").addClass('warning')
 									.attr('title', 'No valid begin reading reported! Unable to submit volume. (Note: begin reading starts from Dec. 15 (last year) to Jan. 15)')
 									.ready(function() {
 										$(calcVolTd).tipsy({gravity: 's'});
 									});
-                } else {
-					throw e
-				}
-			}
-			// HARDCODED: Unit identifier, gallons == 3
-			calcVolTd.data('volume_in_gallons', calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
-            calcVolTd.data('running_total', calcVol.runningTotal);
-
-			return calcVol;
-		};
-
-		function _updateReadingCells(readingContainer, row) {
-			var oldReadingTd = row.find('td.begin_reading');
-			row.find('td.reading_units').remove();
-
-			var beginReadingTd = $('<td></td>').addClass('begin_reading');
-			// Remove the ending cell; we'll be replacing it.
-			row.find('td.ending_reading').remove();
-
-			// Construct the Begin readings. The last value in the readings collection
-			// will be the ending reading.
-			var beginReadings = [];
-			for (var i = 0; i < readingContainer.readings.length; i++) {
-				var r = readingContainer.readings[i];
-				beginReadings.push(r.reading + ((r.rate || r.rate === 0) ? " @@ " + r.rate + ' gpm' : ''));
-			}
-			var endingReading = (readingContainer.isNozzlePackage ? null : beginReadings.pop());
-			var endTd = null;
-
-			if (readingContainer.isNozzlePackage) {
-				// Nozzle packages don't have begin/end readings, only readings
-				// So span both columns
-				beginReadingTd.attr('colspan', 2).addClass('nozzle_package');
-			} else {
-				// Create the ending reading td
-				endTd = $('<td></td>').addClass('ending_reading').text(endingReading || ' ');
-			}
-			if (beginReadings.length > 1) {
-				var ul = $('<ul></ul>');
-				for (var i = 0; i < beginReadings.length; i++) {
-					ul.append($('<li></li>').text(beginReadings[i]));
-				}
-				beginReadingTd.append(ul);
-			} else {
-				beginReadingTd.text(beginReadings[0]);
-			}
-
-			var firstReading = readingContainer.readings[0];
-			var stdUnitId = (firstReading || { unitId: -1 }).unitId;
-			var stdUnits = _state.unitDefinitions[stdUnitId] || ' ';
-
-			oldReadingTd.replaceWith(beginReadingTd);
-			var unitTd = $('<td></td>').addClass('reading_units').text(readingContainer.nonStandardUnits || stdUnits);
-			if (endTd) {
-				beginReadingTd.after(endTd);
-				endTd.after(unitTd);
-			} else {
-				beginReadingTd.after(unitTd);
-			}
-		};
-
-		function _isWellNozzlePackage(well) {
-			var selVal = $('#well_unit_selector_' + well.id).val().toLowerCase();
-			return selVal === 'a' || selVal === 'b';
-		};
-
-		function _getWellRateOrKwh(well) {
-			return parseInt($('#well_rate_' + well.id).val()) || 0;
-		};
-
-
-		function _getWellReadingContainer(well) {
-			var isNozzlePackage = _isWellNozzlePackage(well);
-			var wellRate = _getWellRateOrKwh(well);
-			return {
-				id: well.id,
-				acceptCalculation: true,
-				userRevisedVolume: 0,
-				userRevisedVolumeUnitId: 3,
-
-				countyId: well.countyId,
-				isNozzlePackage: isNozzlePackage,
-				// HARDCODED: meter type string
-				meterType: isNozzlePackage ? 'Nozzle Package' : 'Alternate: Electric',
-				multiplier: 1,
-				nonStandardUnits: isNozzlePackage ? 'GPM' : 'kWh',
-
-				readings: isNozzlePackage
-					// If it is, then use gpm at 4400 hours
-					? [{ reading: 4400, rate: wellRate, units: 'gpm', unitId: 3 }]
-					// Else, use kWh with begin reading of 0
-					: [
-						{ reading: 0, rate: null, units: 'kwh', unitId: 3 },
-						{ reading: wellRate, rate: null, units: 'kwh', unitId: 3 }
-					],
-
-				rolloverValue: 0
-			};
-
-		};
-
-
-		function _getCafoUsageSection(caObj) {
-			if (!config.isCafoDeployed) {
-				return false;
-			}
-			/// If the row already exists in the usage table, this function
-			/// just updates the CAFO id/name and livestock count, then it
-			/// recalculates the volume while preserving any user-entered values
-			/// that may exist.
-			function updateUsageRow(usageTable, rowIndex, cafoId, livestockCount) {
-				var rows = usageTable.find('tbody tr');
-				var cafoName = _state.cafoLookups[cafoId].name;
-				var usage = _state.cafoLookups[cafoId].galPerHeadPerDay;
-				var calcVol = 0;
-
-				// Subtract a row to account for the overall totals row in the reporting table
-				if (rows.length -1 > rowIndex) {
-					// Update existing row
-					var tds = $(rows[rowIndex]).find('td');
-					$(tds[2]).text(usage);
-					// Update the calculated volume
-					calcVol = livestockCount * usage * 365.25;
-					$(tds[3]).text(calcVol).data('volume_in_gallons', calcVol);
-					$(rows[rowIndex]).data('calcVol', {volume: calcVol});
-					// Update the sums
-					$(rows[rowIndex]).data('updateVolume')();
-					usageTable.data('updateVolumeSum')();
-
-					// TODO: Set calc vol unit dropdown, or convert this calcvol appropriately
-
-				} else {
-					// Do nothing. This function used to add rows, but it doesn't anymore.
-				}
-			}
-
-			function getUsageTable() {
-
-				var rptgTable = $('<table class="cafo_annual_usage annual_usage"><thead><tr><th>Operation</th><th>Avg. # Livestock Per Day</th><th>Usage Rate (gal/head/day)</th><th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol?</th><th>Total Volume (acre-in)</th></tr></thead></table>');
-
-				var tbody = $('<tbody></tbody>');
-				rptgTable.append(tbody);
-
-				// Append totals row
-				rptgTable.append($('<tfoot></tfoot>').append($('<tr><td colspan="6"></td><td class="total_volume_sum">total table volume</td></tr>')));
-
-				rptgTable.data('updateVolumeSum', (function (usageTable) {
-						return function() {
-							// Tally up the totals in each row and display the sum
-							// in the overall sum cell
-							var sum = 0;
-							$(usageTable).find('tbody tr').each(function(ndx, el) {
-								sum += parseFloat($(el).data('acceptedVol')) || 0;
-							});
-							$(usageTable).find('tfoot tr td.total_volume_sum').text(util.round(sum)).data('acceptedVol', sum);
-
-							caObj.annualUsageSummary.annualVolume = parseInt(sum);
-
-							usageTable.trigger('summary_volume_change', caObj);
-
-
-							// Update water banking section
-							//$('#surplus_tag_' + caObj.number).text((surplusTotal >= 0 ? "surplus" : "deficit") + " of " + util.round(Math.abs(surplusTotal)) + " inches");
-							//$('#max_bank_' + caObj.number).text(util.round(Math.max(surplusTotal, 0)));
-
-						};
-					})(rptgTable)
-				);
-
-
-				/*
-				// TODO: WARNING: div no longer exists here; find an alternative
-				// For each operation, add an annual usage row and calculated volume
-				$('table.cafos tbody tr').each(function(ndx, el) {
-					var selOpt = $(this).find('select option:selected');
-					if (parseInt(selOpt.val()) < 0) {
-						return; // Ignore the '--select one--' option
-					}
-
-					var livestockCount = parseInt($(this).find('input').val()) || 0;
-
-					updateUsageRow(rptgTable, ndx, parseInt(selOpt.val()), livestockCount);
-				});
-				*/
-
-				// Update all calculated volumes now that table is added to dom
-				rptgTable.data('updateVolumeSum')();
-
-				return rptgTable;
-			};
-
-			function getCafoRow(usageTable, rowIndex, cafoObj) {
-
-				// This function expects to be called with a context
-				// of the CAFO table row. It updates the calculated
-				// volume in the row based on current selections.
-				function updateCalcVol() {
-					// The row needs to have a selected CAFO type in order to look up the
-					// usage rate to calculate volume.
-					var tr = $(this);
-					var sel = tr.find('select.cafoType');
-					var cid = parseInt(sel.val());
-					var avgLivestock = parseInt(tr.find('input.avgLivestock').val());
-					if (cid > 0) {
-						// Update the row containing this textbox
-						updateUsageRow(usageTable, tr.index(), cid, avgLivestock);
-						sel.removeAttr('title').tipsy('hide');
-					} else {
-						sel.attr('title', 'Please select a CAFO type first.').tipsy({ gravity: 'n', trigger:'manual'}).tipsy('show');
-					}
-				};
-
-				function getCafoDropdown(selectedValue) {
-					var sel = $('<select class="cafoType"><option value="-1">-- Select one --</option></select>');
-					for (var i in _state.cafoLookups) {
-						sel.append($('<option value="'+i+'"' + (selectedValue == _state.cafoLookups[i].operationId ? ' selected="selected"' : '') + '>'+_state.cafoLookups[i].name+'</option>'));
-					}
-					sel.change(function() {
-						// If this thing's parent row is the last row in its table,
-						// then add another new row to the table. 
-						var parent = $(this).closest('tr');
-						if (parent.is(':last-child')) {
-                            // Meng: OK this is where we can prevent the row addition from happening when the CA has been submited~~~
-                            
-							parent.closest('tbody').append(getCafoRow(usageTable, parent.index() + 1));
-						}
-						parent.data('cafoId', parseInt($(this).val()));
-
-						updateCalcVol.call($(this).closest('tr'));
-
-					});
-					return sel;
-				};
-
-				// Provide a default in case this is a new empty row
-				// This signature should match the JsonCafo object defined server-side
-				cafoObj = cafoObj || { id: -1, avgLivestock: 0, cafoId: null, calculatedVolumeGallons: 0, acceptCalculation: true, userRevisedVolume: null, userRevisedVolumeUnitId: 3 };
-
-
-				var row = $('<tr></tr>').addClass('cafo-row').data('cafoObj', cafoObj);
-
-
-				var calcUnitsDropdown = _getUnitDropdown("calc_vol_units_cafo_" + rowIndex);
-				calcUnitsDropdown.change((function(calcVol) {
-					return function() {
-						// Adjust the value in the previous cell (calculated volume cell) to the desired units.
-						var prevTd = $(this).closest('td').prev();
-						var gals = parseInt(prevTd.data('volume_in_gallons'));
-                        // Hard code: since we convert the unit to Gallons, we should always use "3" here as the conversion factor matrix index
-						prevTd.text(util.round(gals * _unitConversionFactors[3][parseInt($(this).val())]));
-					};
-				})({unitId: 3}));
-
-				// add new row
-				var volumeInGallons = 0; // livestockCount * usage * 365.25;
-				row.data('calcVol', {volume: volumeInGallons});
-
-				var txtbox = $('<input type="text" class="short avgLivestock"></input>');
-				txtbox.val(cafoObj.avgLivestock);
-				txtbox.on('blur change', function() { updateCalcVol.call($(this).closest('tr')); });
-
-				row.append(
-					$('<td></td>').append(getCafoDropdown(cafoObj.cafoId))
-				).append(
-					$('<td></td>').append(txtbox)
-				).append(
-					$('<td></td>').text(' ')
-				).append(
-					$('<td></td>').text(volumeInGallons).data('volume_in_gallons', volumeInGallons)
-				).append(
-					$('<td></td>').append(calcUnitsDropdown)
-				).append(
-					// HACK: using rowindex for CA number and readingContainer id, because
-					// existing user acceptance code wants to see those values and no such
-					// unique identifier for CAFOs yet exists
-					//
-					// This will play havoc with persisting these values
-					$('<td></td>').append(_getAcceptanceDropdown({number:rowIndex}, {id:rowIndex, acceptCalculation:true})).append(_getUserRevisedVolSection({number:rowIndex}, {id:rowIndex, acceptCalculation:true}))
-				).append(
-					$('<td></td>').addClass('total_volume').text('0')
-				);
-
-
-				// Terrible name, 'readingContainer', but using this to reuse 
-				// code elsewhere for user revised volume
-				row.data('readingContainer', { acceptCalculation: true })
-					.data('updateVolume', (function(row) {
-						var cFactor = 1;
-						return function() {
-							// Update the "total volume" column for this row based on current selections
-							var sel = $(row).find('select.user_acceptance');
-
-							// This is the cell to write the total volume to
-							var td = $(row).find('td.total_volume');
-							if (!td || td.length == 0) {
-								return;
-							}
-
-							var volume = 0;
-                            caObj.userRevisedVolume = false;
-							// Check user revised volume - if present and dropdown says so,
-							// use it instead of calculated volume.
-							if (sel.val() == 1) {
-								// 1 == accept calculated volume
-								// HARDCODE
-								// Warning! This depends on UnitOfMeasurementIDs remaining consistent!
-								// This assumes gallons == 3 and acre-inches == 2.
-								cFactor = _unitConversionFactors[3][2];
-								volume = (row.data('calcVol') || { volume: 0 }).volume;
-
-							} else {
-                                caObj.userRevisedVolume = true;
-								// Do not accept calculated volume; enter user revised volume
-								cFactor = _unitConversionFactors[row.find('.user_revised_vol_units').val()][2];
-								volume = parseInt(row.find('input.user_revised_vol').val());
-							}
-
-							// Display to 3 decimal places, converted to ac-in
-							volume = (Math.round(1000 * (volume * cFactor)) / 1000) || 0;
-
-							td.text(util.round(volume));
-
-							row.data('acceptedVol', volume);
-
-							var t = td.closest('table');
-							if (t.length > 0 && $.isFunction(t.data('updateVolumeSum'))) {
-								t.data('updateVolumeSum')();
-							}
-						};
-
-					})(row));
-				
-
-				row.data('updateCalculatedVolume', updateCalcVol);
-
-				return row;
-			};
-
-			var table = getUsageTable();
-			var tbody = $(table).find('tbody');
-			// Append a row for each cafo obj
-			for (var i = 0; i < caObj.cafos.length; i++) {
-				var row = getCafoRow(table, i, caObj.cafos[i]);
-				tbody.append(row);
-			}
-
-			// Then one more for a new cafo
-			tbody.append(getCafoRow(table, caObj.cafos.length));
-
-			// Update volume on all rows - for some reason this can only be done
-			// after the row is physically added to the DOM
-			tbody.find('tr').each(function() {
-				$(this).data('updateVolume')(); // also updates table volume sum
-				// For rows that have a cafo type selected, update the calculated volume.
-				if ($(this).find('select.cafoType').val() > 0) {
-					$(this).data('updateCalculatedVolume').call(this);
-				}
-			});
-
-			return table;
-		};
-
-
-		// Determines whether there are any CAFOs specified on this CA,
-		// and updates the "Annual Usage" title accordingly.
-		// caNumber is the contiguous acres number; parentTr is the
-		// table row holding the reporting section for that CA.
-		function _updateStandardAnnualUsageTitle(caNumber, parentTr) {
-			var h4 = $('h4#annual_usage_title_' + caNumber);
-			if (parentTr.find('td.cafo_response').length > 0) {
-				// CAFOs are present.
-				h4.text('Metered Usage');
-			} else {
-				h4.text('Annual Usage');
-			}
-		};
-
-		// Adds a CAFO section to the page, if not already present.
-		// If there is already a CAFO table on the page, this function does nothing
-		// (to avoid wiping out previously-entered data).
-		function _updateCafoSection(caObj) {
-			if (!config.isCafoDeployed) {
-				return false;
-			}
-			var section = $('section#cafo_usage_' + caObj.number);
-			// If the CA has no CAFOs, delete the section and return.
-			if ($('tr.user_reporting_row.caid_' + caObj.number + ' td.cafo_response').length === 0) {
-				section.empty();
-				return;
-			}
-			if (section.find('table').length > 0) {
-				return;
-			}
-
-			var table = _getCafoUsageSection(caObj);
-			section.empty().append($('<h4></h4>').text("Animal Feeding Operation Usage")).append(
-				table
-			).show();
-		}
-
-
-		return {
-
-			getAnnualUsageSection: function(contigAcres, isEditable, circumstanceId) {
-				// This does not take CAFOs into account because that logic is in the
-				// resetWellMeterTable function - it looks at the circumstance and calls
-				// the CAFO function appropriately.
-
-				// Note: store a reference to contigAcres on this reporting container so that
-				// child elements can update properties as necessary (i.e. user reported volume, etc.)
-				var container = $('<div></div>').addClass('reporting_container').data('contigAcres', contigAcres);
-				var table = $('<table><thead><tr><th>Meter #</th><th>County</th><th>Begin Reading(s)</th><th>Ending Reading</th><th>Reading Units</th><th class="squeeze-col">Squeeze Value</th><th>Calculated Volume</th><th>Calc. Vol. Units</th><th>Accept Calc. Vol.?</th><th>Total Volume (acre-in)</th></tr></thead></table>');
-				table.addClass('annual_usage');
-				var tbody = $('<tbody></tbody>');
-
-				// There are a couple of possibilities here. For normal circumstances,
-				// we'll be iterating through meterInstallationIds. For special circumstances
-				// we'll have to display well IDs instead of meterInstallationIds.
-				var rowVMs = [];
-				/* A row datasource object contains the properties needed for a row to be drawn,
-					essentially a viewmodel that serves both meters and wells and presents a unified
-					interface to the row-drawing logic below.
-
-				rowDatasource = {
-					id: (well or meter ID),
-					county: (...),
-					readingContainer: [
-						{
-							reading: 123,
-							rate: 123,
-							units: 'a string',
-							unitId: 0
-						}
-					],
-
-				}
-				*/
-
-                // Special circumstance: wells not able to produce [somevalue] ac/in
-                // Not fully implemented as of 2013.01.26
-				if (parseInt(circumstanceId) === 1) {
-					// This is well IDs.
-					for (var i = 0; i < contigAcres.wells.length; i++) {
-						var well = contigAcres.wells[i];
-						// Readings here depend on the unit that was selected
-						// above for this well. If max pump or flow test,
-						// then treat it as a nozzle package and list the
-						// pump rating or flow rate test result in gpm assuming
-						// 2000 hours of use.
-						//
-						// If user selected average kWh, treat the well as
-						// an "alternate: electric" meter and use a beginning
-						// reading of 0 and the avg use as the ending reading.
-						var vm = {
-							county: well.county,
-							id: well.id,
-
-							readingContainer: _getWellReadingContainer(well)
-						};
-
-						rowVMs.push(vm);
-					}
-				} else {
-					// Build the viewmodel out of meter readings
-					for (var meterInstallationId in contigAcres.meterReadings) {
-						var reading = contigAcres.meterReadings[meterInstallationId];
-
-						// Meter may no longer exist due to soft deletes.
-						// Instead rely on the properties on the meterReadings object.
-						var vm = {
-							county: reading.county,
-							id: meterInstallationId,
-
-							readingContainer: (function(miid, contigAcres, reading) {
-								var readingC = contigAcres.meterReadings[meterInstallationId];
-								var ret = [];
-								for (var j = 0; j < readingC.readings.length; j++) {
-									ret.push({
-										reading: readingC.readings[j].reading,
-										rate: readingC.readings[j].rate,
-										isValidBeginReading: readingC.readings[j].isValidBeginReading,
-										isValidEndReading: readingC.readings[j].isValidEndReading,
-										units: reading.nonStandardUnits || _state.unitDefinitions[reading.unitId] || ' ',
-										unitId: reading.unitId
+                        }else if (e.name == 'NoEndReadingException') {
+							calcVol.volume = 0;
+							calcVolTd.text("0").addClass('warning')
+									.attr('title', 'No valid end reading reported! Unable to submit volume. (Note: end reading starts from Dec. 15 to Jan. 15 (next year))')
+									.ready(function() {
+										$(calcVolTd).tipsy({gravity: 's'});
 									});
-								}
-								return {
-									id: meterInstallationId,
-
-									acceptCalculation: readingC.acceptCalculation,
-									userRevisedVolume: readingC.userRevisedVolume,
-									userRevisedVolumeUnitId: readingC.userRevisedVolumeUnitId,
-
-									depthToRedbed: readingC.depthToRedbed,
-									squeezeValue: readingC.squeezeValue,
-
-									countyId: reading.countyId,
-									isNozzlePackage: reading.isNozzlePackage,
-									isElectric: reading.isElectric,
-									isNaturalGas: reading.isNaturalGas,
-									meterType: reading.meterType,
-									multiplier: reading.meterMultiplier,
-									nonStandardUnits: reading.nonStandardUnits,
-
-									readings: ret,
-
-									rolloverValue: reading.rolloverValue
-								};
-							})(meterInstallationId, contigAcres, reading)
-
-
-						};
-
-						rowVMs.push(vm);
+                        } else {
+							throw e
+						}
 					}
-				}
+					// HARDCODED: Unit identifier, gallons == 3
+					//console.debug(calcVol, calcVol.unitId);
+					calcVolTd.data('volume_in_gallons', calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
+                    //console.debug("calcVol.volume: ", calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
+                    //console.debug("unit conversion factor?: ", _unitConversionFactors[calcVol.unitId] || {3:0})
+                    //console.debug("[3]: ", (_unitConversionFactors[calcVol.unitId] || {3:0})[3])
+                    //console.debug("Calculated volume?: ", calcVol.volume * (_unitConversionFactors[calcVol.unitId] || {3:0})[3]);
 
-				// Keep track of whether we have any squeeze input in this table,
-				// because if not, we should also hide the header squeeze cell.
-				var hasSqueeze = false;
+					var beginReadingTd = $('<td></td>');
+					if (isNozzlePackage) {
+						// Nozzle packages don't have begin/end readings, only readings
+						// So span both columns
+						beginReadingTd.attr('colspan', 2);
+					}
+					if (beginReadings.length > 1) {
+						var ul = $('<ul></ul>');
+						for (var i = 0; i < beginReadings.length; i++) {
+							ul.append($('<li></li>').text(beginReadings[i]))
+						}
+						beginReadingTd.append(ul);
+					} else {
+						beginReadingTd.text(beginReadings[0]);
+					}
 
-				for (var vmidx = 0; vmidx < rowVMs.length; vmidx++) {
-					var vm = rowVMs[vmidx];
 
-					// var meter = _state.meterInstallations[meterInstallationId];
-					// readingContainer = contigAcres.meterReadings[meterInstallationId];
-					var isNozzlePackage = vm.readingContainer.isNozzlePackage;
+					var acceptanceDropdown = _getAcceptanceDropdown(contigAcres, reading);
 
-					var calcVolTd = $('<td></td>').addClass('calc_vol_td');
-					var calcVol = _updateCalculatedVolume(vm.readingContainer, calcVolTd, contigAcres, vm.id);
-
-					var beginReadingTd = $('<td></td>').addClass('begin_reading');
-
-					var readingUnitId = vm.unitId;
-
-                    var squeezeInputBox = (config.isEcfDeployed && (vm.readingContainer.isElectric || vm.readingContainer.isNaturalGas))
-                    						? _getSqueezeInputBox("squeeze_input_" + contigAcres.number + '_' + vm.id, vm.readingContainer.squeezeValue)
-                    						: null;
-
-					var acceptanceDropdown = _getAcceptanceDropdown(contigAcres, vm.readingContainer);
-
-					var calcUnitsDropdown = _getUnitDropdown("calc_vol_units_" + contigAcres.number + '_' + vm.id);
-
+					var calcUnitsDropdown = _getUnitDropdown("calc_vol_units_" + contigAcres.number + '_' + meterInstallationId);
 					calcUnitsDropdown.change((function(calcVol) {
 						return function() {
 							// Adjust the value in the previous cell (calculated volume cell) to the desired units.
 							var prevTd = $(this).closest('td').prev();
+                            
 							var gals = parseInt(prevTd.data('volume_in_gallons'));
-							prevTd.text(util.round(gals * _unitConversionFactors[calcVol.unitId][parseInt($(this).val())]));
+                            // Hard code: since we convert the unit to Gallons, we should always use "3" here as the conversion factor matrix index
+							prevTd.text(util.round(gals * _unitConversionFactors[3][parseInt($(this).val())]));
+                            //console.debug("Gals: ", gals);
+                            //console.debug("Unit Coversion Factor: ", _unitConversionFactors[3]);
+                            //console.debug("Selected unit index(?): ", [parseInt($(this).val())]);
+                            //console.debug("Calcualted volume: ", util.round(gals * _unitConversionFactors[3][parseInt($(this).val())]));
+                            //console.debug("calcVol: ", calcVol);
 						};
 					})(calcVol));
 
 					calcUnitsDropdown.val(calcVol.unitId);
 
 					var tr = $('<tr></tr>');
-
-					if (squeezeInputBox) {
-						// At least one row here has an applicable squeeze value.
-						hasSqueeze = true;
-					}
 					tr.addClass('meter_usage_row')
-						.attr('id', 'au_' + contigAcres.number + '_' + vm.id)
+						.attr('id', 'au_' + contigAcres.number + '_' + meterInstallationId)
 						.append(
-							$('<td></td>').text(vm.id)
+							$('<td></td>').text(meterInstallationId)
 						).append(
-							$('<td></td>').text(vm.county)
+							$('<td></td>').text(reading.county)
 						).append(
-							$('<td></td>').addClass('begin_reading') // Contents will be updated below
+							beginReadingTd
 						).append(
-							$('<td></td>').text(vm.readingContainer.nonStandardUnits || _state.unitDefinitions[readingUnitId] || ' ').addClass('reading_units')
+							(isNozzlePackage ? null : $('<td></td>').text(endingReading || ' '))
 						).append(
-							$('<td></td>').addClass('squeeze-col').append(squeezeInputBox)
-                        ).append(
+							$('<td></td>').text(reading.nonStandardUnits || _state.unitDefinitions[readingUnitId] || ' ')
+						).append(
 							calcVolTd
 						).append(
 							$('<td></td>').append(calcUnitsDropdown)
 						).append(
-							$('<td></td>').append(acceptanceDropdown).append(_getUserRevisedVolSection(contigAcres, vm.readingContainer))
+							$('<td></td>').append(acceptanceDropdown).append(_getUserRevisedVolSection(contigAcres, reading))
 						).append(
-							$('<td></td>').addClass('total_volume').attr('id', 'total_volume_' + contigAcres.number + '_' + vm.id)
+							$('<td></td>').addClass('total_volume').attr('id', 'total_volume_' + contigAcres.number + '_' + meterInstallationId)
 						)
 						.data('calcVol', calcVol) // Store the calculated volume as data on the row for later submittal
-						.data('readingContainer', vm.readingContainer) // Store a reference to the reading to update stuff like calculation acceptance
-						.data('updateVolume', (function(vm, row, ca, miid) {
+						.data('meterReading', reading) // Store a reference to the reading to update stuff like calculation acceptance
+						.data('updateVolume', (function(row, ca, miid) {
 							// Conversion factor 
 							var cFactor = 1;
 							return function() {
-
 								// Update the "total volume" column for this row based on current selections
 								var sel = $(row).find('select.user_acceptance');
 
@@ -1200,46 +782,43 @@
 								if (!td || td.length == 0) {
 									return;
 								}
-								row.data('calcVol', _updateCalculatedVolume(vm.readingContainer, $(row).find('td.calc_vol_td'), ca, miid));
-								var volume; 
 
+								var volume = 0;
+                                contigAcres.userRevisedVolume = false;
+                                //console.debug("User revised volume: " + _userRevisedVolume);
 								// Check user revised volume - if present and dropdown says so,
 								// use it instead of calculated volume.
 								if (sel.val() == 1) {
 									// HARDCODE
 									// Warning! This depends on UnitOfMeasurementIDs remaining consistent!
 									// This assumes gallons == 3 and acre-inches == 2.
-									cFactor = _unitConversionFactors[3][2];
+									//cFactor = _unitConversionFactors[3][2];
+                                    console.debug("_unitConversionFactors", _unitConversionFactors);
+                                    					//cFactor = (_unitConversionFactors[calcVol.unitId] || [1,1])[2];                                  
+                                    					cFactor = (_unitConversionFactors[row.data('calcVol').unitId] || [1,1])[2];                                  
 									volume = (row.data('calcVol') || { volume: 0 }).volume;
 								} else {
-                                    contigAcres.userRevisedVolume = true; // mjia: that is WHY the user revised volume never gets written into database!!!!!!!!!
+                                    contigAcres.userRevisedVolume = true;
+                                    //console.debug("User revised volume after selecting 'Not Accept (?)': " + _userRevisedVolume);
 									cFactor = _unitConversionFactors[$('#user_revised_vol_units_' + ca.number + '_' + miid).val()][2];
+									console.debug(_unitConversionFactors, $('#user_revised_vol_units_' + ca.number + '_' + miid).val());
 									volume = parseInt($('#user_revised_vol_' + ca.number + '_' + miid).val());
-                                    //console.debug("resived vol: ", volume);
 								}
 
+                                console.debug("cFactor: ", cFactor);
+                                console.debug("volume: ", volume);
 								// Display to 3 decimal places, converted to ac-in
 								volume = (Math.round(1000 * (volume * cFactor)) / 1000) || 0;
 
 								td.text(util.round(volume));
 
-
 								td.closest('table').data('updateVolumeSum')();
 
 							};
-						})(vm, tr, contigAcres, vm.id)); 
+						})(tr, contigAcres, meterInstallationId)); 
+
 
 					tbody.append(tr);
-
-					_updateReadingCells(vm.readingContainer, tr);
-				}
-
-
-				table.append(tbody);
-				var totalsRowColspan = 9;
-				if (!hasSqueeze) {
-					table.addClass("no-squeeze");
-					totalsRowColspan = 8;
 				}
 
 				// If there are no meters associated with this CA, show a message to that effect.
@@ -1248,6 +827,8 @@
 					tbody.append($('<tr><td colspan="9"><em>(no meters or wells currently mapped to this CA)</em></td></tr>'));
 
 				}
+
+				table.append(tbody);
 
 
 				var state = this;
@@ -1269,19 +850,13 @@
 											)
 										).append(
 											$('<tr></tr>').append(
-												$('<td></td>').text('Annual Volume (acre-ft)')
-											).append(
-												$('<td></td>').addClass('annual_volume_ac_ft')
-											)										
-										).append(
-											$('<tr></tr>').append(
-												$('<td></td>').text('Average Application Rate (ac-in/ac)')
+												$('<td></td>').text('Average Application Rate (in/acre)')
 											).append(
 												$('<td></td>').addClass('avg_app_rate').text(' ')
 											)
 										).append(
 											$('<tr></tr>').append(
-												$('<td></td>').text('Allowable Application Rate (ac-in/ac)')
+												$('<td></td>').text('Allowable Application Rate (in/acre)')
 											).append(
 												$('<td></td>').addClass('allowable_app_rate').text(' ')
 											)
@@ -1304,46 +879,12 @@
 												$('<td></td>').addClass('surplus_total').text(' ')
 											)
 										)
-									);	
-				$('body').delegate('table.annual_usage', 'summary_volume_change', (function(summaryTable) {
-					return function(event, caObj) {
-						// If this summary table is not a child of the CA being updated, return immediately.
-						if (summaryTable.closest('tr.user_reporting_row.caid_' + caObj.number).length === 0) {
-							return;
-						}
-						// Find the sums from any/all annual usage tables
-						var sum = 0;
-						$('tr.user_reporting_row.caid_' + caObj.number + ' td.total_volume_sum').each(function() { sum += $(this).data('acceptedVol'); });
-
-						// Update the annual usage summary table
-						summaryTable.find('td.annual_volume').text(util.round(sum));
-						// HARDCODE: Converting ac-in to ac-ft
-						summaryTable.find('td.annual_volume_ac_ft').text(util.round(sum / 12));
-						var avgAppRate = sum / caObj.annualUsageSummary.contiguousArea;
-						var allowableAppRate = caObj.annualUsageSummary.allowableApplicationRate;
-						var surplusSubtotal = allowableAppRate - avgAppRate;
-						var surplusTotal = surplusSubtotal + caObj.annualUsageSummary.bankedWaterFromPreviousYear;
-						summaryTable.find('td.avg_app_rate').text(util.round(avgAppRate));
-						summaryTable.find('td.allowable_app_rate').text(util.round(allowableAppRate));
-
-						// Surplus subtotal == allowable - average
-						summaryTable.find('td.surplus_subtotal').text(util.round(surplusSubtotal));
-
-						summaryTable.find('td.banked_water_carryover').text(util.round(caObj.annualUsageSummary.bankedWaterFromPreviousYear));
-
-						summaryTable.find('td.surplus_total').text(util.round(surplusTotal));
-
-						// Update water banking section
-						$('#surplus_tag_' + contigAcres.number).text((surplusTotal >= 0 ? "surplus" : "deficit") + " of " + util.round(Math.abs(surplusTotal)) + " inches");
-						$('#max_bank_' + contigAcres.number).text(util.round(Math.max(surplusTotal, 0)));
-						$('#desired_bank_' + contigAcres.number).val(_roundDesiredBankedInches(Math.max(surplusTotal, 0)));
-					};
-				})(summaryTable));
+									);				
 
 				table.append(
 					$('<tfoot></tfoot>').append(
 						$('<tr></tr>').append(
-							$('<td colspan="' + totalsRowColspan + '"></td>').text('Total:')
+							$('<td colspan="8"></td>').text('Total:')
 						).append(
 							$('<td></td>').addClass('total_volume_sum').attr('id', 'total_vol_' + contigAcres.number)
 						)
@@ -1355,12 +896,30 @@
 							sum += parseFloat($(this).text());
 						});
 
-						$(table).find('td.total_volume_sum').text(util.round(sum)).data('acceptedVol', sum);
-						contigAcres.annualUsageSummary.annualVolume = parseFloat(sum);
+						$(table).find('td.total_volume_sum').text(util.round(sum));
+						contigAcres.annualUsageSummary.annualVolume = parseInt(sum);
 
-						// Delegate this logic to an event
-						usageTable.trigger('summary_volume_change', contigAcres);
+						// Update the annual usage summary table
+						rptgTable.find('td.annual_volume').text(util.round(sum));
+						var avgAppRate = sum / contigAcres.annualUsageSummary.contiguousArea;
+						var allowableAppRate = contigAcres.annualUsageSummary.allowableApplicationRate;
+						var surplusSubtotal = allowableAppRate - avgAppRate;
+						var surplusTotal = surplusSubtotal + contigAcres.annualUsageSummary.bankedWaterFromPreviousYear;
+						rptgTable.find('td.avg_app_rate').text(util.round(avgAppRate));
+						rptgTable.find('td.allowable_app_rate').text(util.round(allowableAppRate));
 
+						// Surplus subtotal == allowable - average
+						rptgTable.find('td.surplus_subtotal').text(util.round(surplusSubtotal));
+
+						rptgTable.find('td.banked_water_carryover').text(util.round(contigAcres.annualUsageSummary.bankedWaterFromPreviousYear));
+
+						rptgTable.find('td.surplus_total').text(util.round(surplusTotal));
+
+						// Update water banking section
+						$('#surplus_tag_' + contigAcres.number).text((surplusTotal >= 0 ? "surplus" : "deficit") + " of " + util.round(Math.abs(surplusTotal)) + " inches");
+						//$('#max_bank_' + contigAcres.number).text(util.round(Math.max(surplusTotal, 0)));
+                        $('#max_bank_' + contigAcres.number).text(_roundDesiredBankedInches(Math.max(surplusTotal, 0)));
+                        $('#desired_bank_' + contigAcres.number).val(_roundDesiredBankedInches(Math.max(surplusTotal, 0)));
 					};
 				})(table, summaryTable, contigAcres));
 
@@ -1370,43 +929,41 @@
 				table.data('updateVolumeSum')();
 
 				container.append(summaryTable);
-				if (circumstanceId === "") {  //banked water for metered case only
-					// Build historical water banking table
-					container.append($('<h4></h4>').text('Historical Water Banking'));
-					var historicalBankingTable = $('<table></table>')
-													.addClass('historical_banking')
-													.append(
-														$('<thead></thead>').append(
-															$('<tr></tr>').append(
-																$('<th></th>').text('Year')
-															).append(
-																$('<th></th>').text('Acres')
-															).append(
-																$('<th></th>').text('Inches')
-															)
-														)
-													);
-					var bankingBody = $('<tbody></tbody>');
-					for (var yr in contigAcres.bankedWaterHistory) {
-						bankingBody.append(
-							$('<tr></tr>').append(
-								$('<td></td>').text(yr)
-							).append(
-								$('<td></td>').text(contigAcres.bankedWaterHistory[yr].acres)
-							).append(
-								$('<td></td>').text(contigAcres.bankedWaterHistory[yr].bankedInches)
-							)
-						);
-					}
-					if (bankingBody.children().length == 0) {
-						// No historical data found
-						bankingBody.append($('<tr></tr>').append($('<td colspan="3"><em>No historical banking data found</em></td>')));
-					}
-					historicalBankingTable.append(bankingBody);
-	
-					container.append(historicalBankingTable);
-				}
 
+				// Build historical water banking table
+				container.append($('<h4></h4>').text('Historical Water Banking'));
+				var historicalBankingTable = $('<table></table>')
+												.addClass('historical_banking')
+												.append(
+													$('<thead></thead>').append(
+														$('<tr></tr>').append(
+															$('<th></th>').text('Year')
+														).append(
+															$('<th></th>').text('Acres')
+														).append(
+															$('<th></th>').text('Inches')
+														)
+													)
+												);
+				var bankingBody = $('<tbody></tbody>');
+				for (var yr in contigAcres.bankedWaterHistory) {
+					bankingBody.append(
+						$('<tr></tr>').append(
+							$('<td></td>').text(yr)
+						).append(
+							$('<td></td>').text(contigAcres.bankedWaterHistory[yr].acres)
+						).append(
+							$('<td></td>').text(contigAcres.bankedWaterHistory[yr].bankedInches)
+						)
+					);
+				}
+				if (bankingBody.children().length == 0) {
+					// No historical data found
+					bankingBody.append($('<tr></tr>').append($('<td colspan="3"><em>No historical banking data found</em></td>')));
+				}
+				historicalBankingTable.append(bankingBody);
+
+				container.append(historicalBankingTable);
 
 
 				if (contigAcres.isSubmitted || !isEditable || !contigAcres.isCurrentUserOwner) {
@@ -1423,69 +980,35 @@
 						);
 					}
 				} else {
-					// REVIEW: Ensure circumstanceId is set correctly here.
-					if (circumstanceId === "" && hasMeters) {  //banked water for metered case only
+					// This only applies if this CA actually has wells/meters associated with it.
+					if (hasMeters) {
 						// Current banking table
 						container.append($('<h4></h4>').text('Current Water Banking'));
 						container.append($('<p>You have a <span id="surplus_tag_' + contigAcres.number + '"></span> of water, including water previously banked.</p>'));
-	
+
 						container.append($('<p>If you want to "bank" water for future use, you must indicate that at this time.</p>'));
-	
-	
+
+
 						var currentBankingTable = $('<table><tbody><tr>'
 													+ '<td>The maximum water value you can bank this year is:</td><td id="max_bank_' + contigAcres.number + '"></td>'
 													+ '</tr><tr>'
 													+ '<td>How much water do you want to bank this year (nearest tenth inch)?</td><td><input type="text" id="desired_bank_' + contigAcres.number + '" class="tiny" /> inches</td>'
 													+ '</tr></tbody></table>')
 													.addClass('current_banking');
-	
+
 						container.append(currentBankingTable);
 					}
-
 					container.append(
 						$('<p>This completes the Annual Usage Report for this contiguous area. If you feel the data is correct and final, please press the "Submit" button below. If not, please correct any data. No data can be edited once it is submitted.</p>')
 					).append(
 						$('<p id="submittal_status_' + contigAcres.number + '"></p>').hide()
 					).append(
-						$('<input type="submit"></input>').prop('disabled', _canSubmit(contigAcres)).val('Submit').click(function() {
+						$('<input type="submit"></input>').prop('disabled', _isSubmitDisabled(contigAcres)).val('Submit').click(function() {
 							if (confirm('After submitting, you will no longer be able to edit values for this contiguous area (' + contigAcres.description + '). Are you sure you want to submit?')) {
 
-								// Update CAFO objects prior to submit so that current 
-								// values get included
-								// TODO: Add validation here. First add it server-side, then
-								//		time permitting, add it here for performance.
-								if (config.isCafoDeployed) {
-									var cafoAr = [];
-									$('tr.cafo-row').each(function() {
-										var cafoObj = $(this).data('cafoObj');
-										// Update the values on the CAFO
-										cafoObj.cafoId = parseInt($(this).find('select.cafoType').val());
-										// If the type was still the default "select one", ignore the row.
-										if (cafoObj.cafoId === -1) {
-											return;
-										}
-										cafoObj.avgLivestock = parseInt($(this).find('input.avgLivestock').val());
-										cafoObj.calculatedVolumeGallons = parseInt($(this).data('calcVol').volume);
-										cafoObj.acceptCalculation = $(this).data('readingContainer').acceptCalculation;
-										cafoObj.userRevisedVolume = parseInt($(this).data('readingContainer').userRevisedVolume);
-										cafoObj.userRevisedVolumeUnitId = parseInt($(this).data('readingContainer').userRevisedVolumeUnitId);
-
-										cafoAr.push(cafoObj);
-									});
-
-									// Reset the contigAcres CAFO collection to match
-									// what's displayed in the table
-									contigAcres.cafos = cafoAr;
-								}
-
-								// For debugging purposes.								
-								if (config.preventSubmit) { 
-									return false;
-								}
-
-
+								//var desiredInches = parseInt($('#desired_bank_' + contigAcres.number).val()) || 0;
                                 // mjia: change int to float
-								var desiredInches = util.round(parseFloat($('#desired_bank_' + contigAcres.number).val()) || 0);
+                                var desiredInches = util.round(parseFloat($('#desired_bank_' + contigAcres.number).val()) || 0);
                                 var desiredInchesInt = Math.floor(desiredInches);
                                 var fraction = desiredInches - desiredInchesInt;
                                 // Rounding eg: 10.10 to 10.15 = 10.1; 10.16 to 10.19 = 10.2
@@ -1507,8 +1030,12 @@
 										return false;
 									}
 								}
-								contigAcres.annualUsageSummary.desiredBankInches = desiredInches;
 
+								contigAcres.annualUsageSummary.desiredBankInches = desiredInches;
+                                //contigAcres.isFakingValidReadings = $('isFakingValidReadings_' + contigAcres.number).val();
+                                //contigAcres.userRevisedVolume = _userRevisedVolume;
+                                //contigAcres.notEnoughReadingsForAllMeters = _notEnoughReadingsAllMeters;
+                                console.debug("CA after expand node: ", contigAcres);
 								_submitCA(contigAcres, function(data, textStatus, jqXHR) {
 									container.find('input, select').attr('disabled', 'disabled');
 									$('#submittal_status_' + contigAcres.number).addClass('success').text('Submittal complete!').show();
@@ -1516,330 +1043,21 @@
 								});
 							}
 						})
-					).append($('<label>This report may only be submitted between December 15 and June 1</label>'));
-				}
+					).append(
+                        $('<label>This report may only be submitted between December 15 and June 1</label>')
+                    );
+				} 
 				return container;
-			}, // getAnnualUsageSection
-			resetWellMeterTable: function(tr, caObj, year, circumstanceId) {
-
-				// circumstanceId represents the "special circumstances" dropdown.
-				// If null/undefined, then this is a normal well/meter table.
-				// If "1", it's "does not support APR" and needs a dropdown selection
-				// in lieu of meter id where the user can enter either:
-				//		A. The maximum flow rating of the pump (in gpm)
-				//		B. The results of a flow test for that well (in gpm)
-				//		C. The average kWh usage for that well for the previous 3 years
-
-				// Create the table.
-				var body = $('<tbody></tbody>');
-				for (var i = 0; i < caObj.wells.length; i++) {
-					var well = caObj.wells[i];
-					var td = $('<td></td>');
-					// The contents of the table cell will depend on the circumstance we're dealing with.
-					// HARDCODED; option values
-					// be very wary of changing these; they are used elsewhere in the script
-					switch (circumstanceId) {
-						case "1": // Wells on this CA cannot produce the APR
-							// Adjust well/meter table titles
-							$('#well_meter_table_meter_number').text('');
-							$('#well_meter_summary_title').text('Well Summary');
-							td.append(
-								$('<select><option value="a">Max pump flow rating (gpm):</option><option value="b">Flow test results (gpm):</option><option value="c">3-yr avg. usage (kWh):</option></select>')
-									.attr('id', 'well_unit_selector_' + well.id)
-									.change(
-										(function(well) {
-											return function() {
-												// If there was previously an upload 
-												$(this).next().nextAll().remove();
-
-												switch ($(this).val()) {
-													case "b":
-													case "c":
-														$(this).closest('td').append('<br />').append(
-															$('<span>Documentation:</span>')
-														).append(
-															$('<input type="file"></input>')
-														);
-														break;
-													default:
-														break;
-												}
-
-												// Additionally, the corresponding row in the
-												// annual usage table has to have its calculated
-												// volume re-calculated.
-												var row = $('tr#au_' + caObj.number + '_' + well.id);
-												var calcVolTd = row.find('td.calc_vol_td');
-												// We're going to need a new readingContainer here.
-												var rc = _getWellReadingContainer(well);
-												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null));
-												_updateReadingCells(rc, row);
-												row.data('updateVolume')();
-											};
-										})(well)
-									) // /change
-							).append(
-								$('<input type="text" class="short"></input>')
-									.val('0')
-									.attr('id', 'well_rate_' + well.id) // For user-entered number
-									.change(
-										(function(well) {
-											return function() {
-												// Update the corresponding row in the annual usage
-												// table to recalculate calculated volume
-												var row = $('tr#au_' + caObj.number + '_' + well.id);
-												var calcVolTd = row.find('td.calc_vol_td');
-												var rc = _getWellReadingContainer(well);
-												row.data('calcVol', _updateCalculatedVolume(rc, calcVolTd, contigAcres, null));
-												_updateReadingCells(rc, row);
-												row.data('updateVolume')();
-											};
-										})(well)
-									)
-							);
-							break;
-						default: // Standard circumstances
-							// adjust well/meter table titles
-							$('#well_meter_table_meter_number').text('Meter #');
-							$('#well_meter_summary_title').text('Well/Meter Summary');
-
-
-							td.text(well.meterInstallationIds.join(', ')).addClass('miids_cell');
-							break;
-					}
-					var row = $('<tr></tr>').append(
-							$('<td></td>').text(well.permitNumber)
-						).append(
-							td
-						);
-
-
-					var errorUl = $('<ul></ul>');
-					if (circumstanceId !== "1") {
-						// This section is for validation.
-
-						// If there is an unresolved error below, certain css classes
-						// will be added to the td.
-						var unresolvedError = false;
-
-						if (typeOf(well.meterInstallationIds) != 'array' || well.meterInstallationIds.length == 0) {
-							// No meters are associated with this well. Is there an existing error response?
-							// If so, show it. If not, link to a dialog to resolve the error with an error message.
-							unresolvedError = unresolvedError || !well.errorResponse;
-							// If this error response is a CAFO, mark the table cell with an appropriate 
-							// CSS class so we can find out elsewhere whether any CAFOs are on this page.
-							// HACK: Parsing this string is brittle...we should store a more reliable identifier in the database.
-							if (well.errorResponse.match(/animal feeding operation/)) {
-								td.addClass('cafo_response');
-							}
-
-							var anchor = $('<a href="#"></a>');
-							errorUl.append(
-								$('<li></li>').append(
-									anchor.text(
-										well.errorResponse || 'No meter installation found.'
-									).click(
-										(function(anchor, td, well) {
-											return function() {
-												reportingSummary.showErrorDialog('missing_meter', well.permitNumber, null, function(success, selectedValue) {
-													if (success) {
-														// Post the response back to the server and
-														// mark this error as resolved.
-														td.removeClass('error').addClass('ajax_loading');
-														$.ajax(
-															"@Url.Action("SaveErrorResponse", "Reporting")",
-															{
-																type:'POST',
-																data: {
-																	wellId: well.id,
-																	meterInstallationId: null,
-																	response: selectedValue.user
-																},
-																dataType: 'json',
-																complete: function(jqXHR, textStatus) {
-																	td.removeClass('ajax_loading');
-																},
-																success: function(data, textStatus, jqXHR) {
-																	if (data.success) {
-																		anchor.addClass('success').text('Saved response. ' + selectedValue.user);
-																		td.removeClass('hasValidationError');
-																	} else {
-																		td.addClass('error');
-																		anchor.text('Unable to save response: ' + data.error);
-																	}
-																},
-																error: function(jqXHR, textStatus, errorThrown) {
-																	anchor.text('Error occurred during save! Message: "' + errorThrown + '". Response not saved.');
-																}
-
-															}
-														);
-
-														// If the user response was to say it was a CAFO, 
-														// then we have some additional work. Add a CAFO
-														// annual usage table.
-														if (selectedValue.identifier === 'cafo') {
-															// Used to help identify whether any CAFOs are present
-															td.addClass('cafo_response');
-
-															// If you want to change the title of the annual usage section for CAFOs, put the text here
-															// Note that if you change it here, you ought to add an 'else' condition to change it back
-															// to whatever the non-CAFO default title is.
-															//$('h4#annual_usage_title_' + caObj.number).text('Metered Usage');
-														} else {
-															td.removeClass('cafo_response');
-														}
-														// Update the annual usage title in case the CAFO/non-CAFO status for this CA changed.
-														_updateStandardAnnualUsageTitle(caObj.number, td.closest('tr.user_reporting_row'));
-														_updateCafoSection(caObj);
-
-													}
-													// else do nothing - success false, so error remains
-												});
-												return false;
-											};
-										})(anchor, td, well)
-									
-									)
-								)
-
-							);
-
-							
-						}
-
-						// If the meter has wells associated that are outside the CA, show 
-						// a validation error for that too.
-						for (var j = 0; j < well.meterInstallationIds.length; j++) {
-							var mie = caObj.meterInstallationErrors[well.meterInstallationIds[j]];
-							if (mie && mie.errorCondition && mie.wellIds.indexOf(well.id) > -1) {
-							 	// && !mie.userResponse) {
-								if (mie.userResponse) {
-									// the user has already responded to this error; show the response.
-									td.append('<p>' + mie.userResponse + '</p>');
-								} else {
-									unresolvedError = true;
-									// An error condition needs to be displayed.
-									errorUl.append(
-										$('<li></li>').append($('<a href="#"></a>').text(mie.errorCondition).click((function(td, well, miid) {
-												return function() {
-													reportingSummary.showErrorDialog('well_outside_contig_acres', mie.wellIds.join(', '), well.meterInstallationIds[j], function(success, selectedValue) {
-														if (success) {
-															td.removeClass('error').addClass('ajax_loading');
-															$.ajax(
-																"@Url.Action("SaveErrorResponse", "Reporting")",
-																{
-																	type:'POST',
-																	data: {
-																		wellId: well.id,
-																		meterInstallationId: well.meterInstallationIds[j],
-																		response: selectedValue.user
-																	},
-																	dataType: 'json',
-																	complete: function(jqXHR, textStatus) {
-																		td.removeClass('ajax_loading');
-																	},
-																	success: function(data, textStatus, jqXHR) {
-																		if (data.success) {
-																			td.addClass('success').text(selectedValue.user);
-																			td.removeClass('hasValidationError');
-																		} else {
-																			td.addClass('error').find('a').text('Unable to save response: ' + data.error);
-																		}
-																	},
-																	error: function(jqXHR, textStatus, errorThrown) {
-																		td.find('a').text('Error occurred during save! Message: "' + errorThrown + '". Response not saved.');
-																	}
-
-																}
-															);
-														}
-													});
-													return false; // for anchor click
-												};
-											})(td, well, well.meterInstallationIds[j]))
-										)
-									);
-								} // endif !mie.userResponse
-							}
-
-						}
-					} // If special circumstances don't apply...
-
-					if (errorUl.children().length > 0) {
-						// Put the (possibly-resolved) contents of the errorUl into the cell
-						td.append(errorUl);
-					}
-					if (unresolvedError) {
-						// An error was indeed unresolved, so add a visual indicator of that fact
-						td.addClass('error').addClass('hasValidationError');
-					}
-
-					body.append(row);
-				} // endfor each well
-
-				// If no wells/meters are associated with the CA, display an informative message to the user.
-				if (body.find('tr').length == 0) {
-					body.append($('<tr><td colspan="3">There are no meters or wells currently mapped within this CA.  If you want to report on water usage in this CA, please create a well on the map using the "Identify Missing Wells" tool, and then contact the District to follow-up on permitting the missing well.</td></tr>'));
-				}
-
-				t = $('<table></table>').append(
-					$('<thead><tr><th>Permit #</th><th id="well_meter_table_meter_number">Meter #</th></tr></thead>')
-				).append(
-					body
-				).addClass('well_meter_table');
-
-				var wmtTd = $('<td colspan="5"></td>').append(
-						$('<h4></h4>').attr('id', 'well_meter_summary_title').text('Well/Meter Summary')
-					).append(t);
-
-				tr.next('tr.user_reporting_row').remove();
-
-				tr.after($('<tr class="user_reporting_row caid_' + caObj.number + '"></tr>').append(wmtTd));
-
-				var rptgTable = this.getAnnualUsageSection(caObj, year == reportingSummary.state.currentReportingYear, circumstanceId);
-
-
-				///////// CAFO Usage table goes here
-
-				var cafoSection = $('<section id="cafo_usage_' +  caObj.number + '"></section>').css({display:'none'});
-				wmtTd.append(cafoSection);
-				///////// END CAFO SECTION
-
-				wmtTd.append($('<h4></h4>').attr('id', 'annual_usage_title_' + caObj.number).text('Annual Usage')).append(rptgTable);
-
-				// Immediately update the text for the above header based on presence
-				// or non-presence of CAFOs.
-				_updateStandardAnnualUsageTitle(caObj.number, wmtTd.closest('tr.user_reporting_row'));
-				_updateCafoSection(caObj);
-
-				// Update all calculated volumes now that table is added to dom
-				$('tr.meter_usage_row').each(function() {
-					$(this).data('updateVolume')();
-				});
-
-				switch (circumstanceId) {
-					case "1": // Wells on this CA cannot produce the APR
-						// Adjust well/meter table titles
-						$('#well_meter_table_meter_number').text('');
-						$('#well_meter_summary_title').text('Well Summary');
-						break;
-					default:
-						// adjust well/meter table titles
-						$('#well_meter_table_meter_number').text('Meter #');
-						$('#well_meter_summary_title').text('Well/Meter Summary');
-
-						break;
-				}
-
-				tr.find('td:first-child span.toggle').removeClass('expand');
-
-			}, // resetWellMeterTable
+			},
+			recalculateTotalVolume: function(contigAcres, meterInstallationId) {
+				return _recalculateTotalVolume(contigAcres, meterInstallationId);
+			},
+			state: _state,
 			save: function() {
 				var dto = { "jsonState" : JSON.stringify(_state) };
 				// Save a snapshot
 				$.ajax(
-					"@Url.Action("SaveState", "Reporting")",
+					'Reporting/SaveState',
 					{
 						type: 'POST',
 						data: dto,
@@ -1849,12 +1067,7 @@
 						}
 					}
 				);
-			},
-			selectedYear: -1,
-			showErrorDialog: function(errorId, wellNumber, meterInstallationId, callback) {
-				_showErrorDialog(errorId, wellNumber, meterInstallationId, callback);
-			},			
-			state: _state
+			}
 		};
 	})();
 
@@ -1887,45 +1100,195 @@
 			reportingSummary.selectedYear = year;
 			// Update the displayed reporting info
 
-			// Note comment in this row excluding the "Special Condition" header cell
-			// As of 2012.11.16 we are not implementing this
-			var caList = $('<table><thead><tr><th><!-- toggle --></th><th>#</th><th>Description</th><th>Reporting Status</th><th>Reporting Responsibility</th><!-- <th>Special Condition</th> --></tr></thead></table>');
+			var caList = $('<table><thead><tr><th><!-- toggle --></th><th>#</th><th>Description</th><th>Reporting Status</th><th>Reporting Responsibility</th></tr></thead></table>');
 
 
 			for (var ca in (reportingSummary.state.years[year] || { contiguousAcres: [] }).contiguousAcres) {
 				var caObj = reportingSummary.state.years[year].contiguousAcres[ca];
 
 				// This gets fired whenever a CA row is clicked
-				// Note enclosures so that loops work
+				// Note enclosure so that loops work
 				var clickHandler = (function(caObj, year) {
 					return function() {
-						var t = $(this).closest('tr').next('tr.user_reporting_row');
+						var t = $(this).closest('tr').next('tr.well_meter_table');
 						if (t.length == 0) {
-							console.log('resetting meter table.');
-							reportingSummary.resetWellMeterTable($(this).closest('tr'), caObj, year, $('#special_circumstance_' + caObj.number).is(':checked') ? "1" : "");
+							// Create the table.
+							var body = $('<tbody></tbody>');
+							for (var i = 0; i < caObj.wells.length; i++) {
+								var well = caObj.wells[i];
+								var td = $('<td></td>').text(well.meterInstallationIds.join(', ')).addClass('miids_cell');
+								var row = $('<tr></tr>').append(
+										$('<td></td>').text(well.permitNumber)
+									).append(
+										td
+									);
+								var errorUl = $('<ul></ul>');
+								if (typeOf(well.meterInstallationIds) != 'array' || well.meterInstallationIds.length == 0) {
+									// No meters are associated with this well. Is there an existing error response?
+									// If so, show it. If not, link to a dialog to resolve the error with an error message.
+
+									if (!well.errorResponse) {
+										var anchor = $('<a href="#"></a>');
+										errorUl.append(
+											$('<li></li>').append(
+												anchor.text(
+													well.errorResponse || 'No meter installation found.'
+												).click(
+													(function(anchor, td, well) {
+														return function() {
+															reportingSummary.showErrorDialog('missing_meter', well.permitNumber, null, function(success, selectedValue) {
+																if (success) {
+																	// Post the response back to the server and
+																	// mark this error as resolved.
+																	td.removeClass('error').addClass('ajax_loading');
+																	$.ajax(
+																		'Reporting/SaveErrorResponse',
+																		{
+																			type:'POST',
+																			data: {
+																				wellId: well.id,
+																				meterInstallationId: null,
+																				response: selectedValue
+																			},
+																			dataType: 'json',
+																			complete: function(jqXHR, textStatus) {
+																				td.removeClass('ajax_loading');
+																			},
+																			success: function(data, textStatus, jqXHR) {
+																				if (data.success) {
+																					anchor.addClass('success').text('Saved response. ' + selectedValue);
+																					td.removeClass('hasValidationError');
+																				} else {
+																					td.addClass('error');
+																					anchor.text('Unable to save response: ' + data.error);
+																				}
+																			},
+																			error: function(jqXHR, textStatus, errorThrown) {
+                                                                                console.debug(error);
+																				anchor.text('Error occurred during save! Message: "' + errorThrown + '". Response not saved.');
+																			}
+
+																		}
+																	);
+
+																}
+																// else do nothing - error remains
+															});
+															return false;
+														};
+													})(anchor, td, well)
+												
+												)
+										)
+
+										);
+									} else {
+										td.append($('<p></p>').text(well.errorResponse));
+									}
+									
+								}
+
+								// If the meter has wells associated that are outside the CA, show 
+								// a validation error for that too.
+								for (var j = 0; j < well.meterInstallationIds.length; j++) {
+									var mie = caObj.meterInstallationErrors[well.meterInstallationIds[j]];
+									if (mie && mie.errorCondition && mie.wellIds.indexOf(well.id) > -1) {
+									 	// && !mie.userResponse) {
+										if (mie.userResponse) {
+											// the user has already responded to this error; show the response.
+											td.append('<p>' + mie.userResponse + '</p>');
+										} else {
+											// An error condition needs to be displayed.
+											errorUl.append(
+												$('<li></li>').append($('<a href="#"></a>').text(mie.errorCondition).click((function(td, well, miid) {
+														return function() {
+															reportingSummary.showErrorDialog('well_outside_contig_acres', mie.wellIds.join(', '), well.meterInstallationIds[j], function(success, selectedValue) {
+																if (success) {
+																	td.removeClass('error').addClass('ajax_loading');
+																	$.ajax(
+																		'Reporting/SaveErrorResponse',
+																		{
+																			type:'POST',
+																			data: {
+																				wellId: well.id,
+																				meterInstallationId: well.meterInstallationIds[j],
+																				response: selectedValue
+																			},
+																			dataType: 'json',
+																			complete: function(jqXHR, textStatus) {
+																				td.removeClass('ajax_loading');
+																			},
+																			success: function(data, textStatus, jqXHR) {
+																				if (data.success) {
+																					td.addClass('success').text(selectedValue);
+																					td.removeClass('hasValidationError');
+																				} else {
+																					td.addClass('error').find('a').text('Unable to save response: ' + data.error);
+																				}
+																			},
+																			error: function(jqXHR, textStatus, errorThrown) {
+																				td.find('a').text('Error occurred during save! Message: "' + errorThrown + '". Response not saved.');
+																			}
+
+																		}
+																	);
+																}
+															});
+															return false; // for anchor click
+														};
+													})(td, well, well.meterInstallationIds[j]))
+												)
+											);
+										} // endif !mie.userResponse
+									}
+
+								}
+							
+								if (errorUl.children().length > 0) {									
+									td.addClass('error').addClass('hasValidationError').append(errorUl);
+								}
+
+								body.append(row);
+							} // endfor each well
+
+							if (body.find('tr').length == 0) {
+								body.append($('<tr><td colspan="3">There are no meters or wells currently mapped within this CA.  If you want to report on water usage in this CA, please create a well on the map using the "Identify Missing Wells" tool, and then contact the District to follow-up on permitting the missing well.</td></tr>'));
+							}
+							t = $('<table></table>').append(
+								$('<thead><tr><th>Permit #</th><th>Meter #</th></tr></thead>')
+							).append(
+								body
+							).addClass('well_meter_table');
+
+							var rptgTable = reportingSummary.getAnnualUsageTable(caObj, year == reportingSummary.state.currentReportingYear);
+							$(this).closest('tr').after(
+								$('<tr class="well_meter_table"></tr>').append(
+									$('<td colspan="5"></td>')
+										.append($('<h4></h4>').text('Well/Meter Summary'))
+										.append(t)
+										.append($('<h4></h4>').text('Annual Usage'))
+										.append(rptgTable)
+								)
+							);
+							// Update all calculated volumes now that table is added to dom
+							$('tr.meter_usage_row').each(function() {
+								$(this).data('updateVolume')();
+							});
+
+							$(this).closest('tr').find('td:first-child span.toggle').removeClass('expand');
 						} else if (!$(t).is(':visible')) {
-							console.log('showing existing table.');
 							$(t).show();
 							$(this).closest('tr').find('td:first-child span.toggle').removeClass('expand');
 						} else {
-							console.log('hiding existing table.');
 							$(t).hide();
 							$(this).closest('tr').find('td:first-child span.toggle').addClass('expand');
 						}
 
 
 
-						// return false;
-					}; // ca click handler function for closure
+						return false;
+					};
 				})(caObj, year); // ca click handler
-
-				var chkbox = $('<input id="special_circumstance_' + caObj.number + '" type="checkbox" />').change(
-					(function(caObj) {
-						return function() {
-							reportingSummary.resetWellMeterTable($(this).closest('tr'), caObj, year, $(this).is(':checked') ? "1" : "");
-						};
-					})(caObj)
-				);
 
 				caList.append(
 					$('<tr class="ca_row"></tr>').append(
@@ -1940,22 +1303,6 @@
 							.addClass(caObj.isSubmitted ? 'submitted' : 'unsubmitted')
 							.text(caObj.isSubmitted ? 'Submitted' : 'Unsubmitted')
 					).append(
-/* <<<<<<< AlternateIndex.cshtml
-						// Special circumstances checkbox - as of 2012.11.16, do not add
-						// If we ever add this back, on the next line down below, adjust the
-						// "find" criteria to be 'td:not(:last-child)' instead of just 'td'.
-						// $('<label>Wells on this CA cannot produce 1.25 AF/ac</label>').prepend(chkbox)
-					).find('td').click(clickHandler).end()
-					// Add a click handler to all TDs except the last ones (containing the
-					// label/checkbox combo, which handles resetting the meter table on their own)
-
-				);
-
-
-			}
-
-			$('#rptg_summary').empty().append($('<h3>Contiguous Acres</h3>')).append(caList);
-======= */
 						$('<td></td>')
 							.append(
 								// Is the current user the owner of the CA?
@@ -1964,13 +1311,19 @@
 									? $('<span>You are responsible for annual reporting on this CA.</span>')
 									// Else, display a link to mail the true owner.
 									: $('<label>You are not responsible </label>'
-                                    ).append($('<a></a>').attr('href', '#').text('Email Responsible Party').click(function(e) {
+                                    ).append($('<a></a>').text('Email Responsible Party')
+                                                .attr('href', '#')
+                                                .attr('rowCaDesc', caObj.description)
+                                                .attr('rowCaId', caObj.number)
+                                                .click(function(e) {
 										e.stopPropagation();
 										e.preventDefault();
+                                        var rowCaDesc = $(this).attr('rowCaDesc');
+                                        var rowCaId = $(this).attr('rowCaId');
 										// Display a form allowing the user to compose a message
 										// to the CA owner.
 										$('<div></div>').append(
-											$('<h2>Contact Owner of ' + caObj.description + '</h2>')
+											$('<h2>Contact Owner of ' + rowCaDesc + '</h2>')
 										).append(
 											$('<p>Compose your message below, then click "Send" to email the owner of these contiguous acres. (Note: Your email address will be visible to the owner and he will be able to reply directly to that address.)</p>')
 										).append(
@@ -1982,12 +1335,14 @@
 												// Update the status indicator, disable the send/cancel buttons
 												// during send
 												var statusEl = $(this).closest('div').find('input,textarea').attr('disabled', 'disabled').end().find('.status').addClass('ajax_loading').text('Sending message...');
+												
+                                                console.debug('caDesc: ', rowCaDesc, 'caId: ', rowCaId);
 												$.ajax(
 													'Reporting/EmailCAOwner',
 													{
 														type:'POST',
 														data:{
-															caId:caObj.number,
+															caId:rowCaId,
 															message:$('#contactCAOwnerMessage').val()
 														},
 														complete: function() {
@@ -2023,7 +1378,7 @@
 
 			}
 
-			$('#rptg_summary').empty().append($('<h3>Contiguous Acres</h3>')).append(caList);
+			$('#summary_right_col').empty().append($('<h3>Contiguous Acres</h3>')).append(caList);
 		});
 		$('#year_selector').append(sel);
 
@@ -2038,7 +1393,8 @@
 
 <div id='year_selector'></div>
 
+<div id='summary_right_col'></div>
 
-<div id='rptg_summary'></div>
+
 
 <script src="@Url.Script("jquery.simplemodal.1.4.2.min.js")" type="text/javascript"></script>

@@ -329,6 +329,17 @@ when not matched then
 								new Param("@userRevisedVolGals", mr.Value.acceptCalculation ? (object)DBNull.Value : userRevisedGallons)
 						);
 
+                        // mjia: change submittal status from "0" or "NULL" to "1"
+                        if (mr.Value.readings.Length != 0)
+                        {
+                            StringBuilder builder = new StringBuilder("update MeterInstallationReadings set IsSubmitted = 1 where MeterInstallationReadingID in (");
+                            foreach (JsonMeterReading reading in mr.Value.readings)
+                            {
+                                builder.Append(reading.meterInstalltionReadingID + ",");
+                            }
+                            builder.Replace(",", ")", builder.Length - 1, 1);
+                            ExecuteNonQuery(builder.ToString());
+                        }
 					}
 					
 					trans.Commit();
@@ -467,6 +478,22 @@ where
     and ActingUserId = @userId;", new Param("@wellId", well.id), new Param("@userId", userId));
                             }
 
+                            // mjia: change submittal status from "1" to "0"
+                            var meterReadings = jsonYear.contiguousAcres[index].meterReadings;
+                            foreach (var mr in meterReadings)
+                            {
+                                if (mr.Value.readings.Length != 0)
+                                {
+                                    StringBuilder builder = new StringBuilder("update MeterInstallationReadings set IsSubmitted = 0 where MeterInstallationReadingID in (");
+                                    foreach (JsonMeterReading reading in mr.Value.readings)
+                                    {
+                                        builder.Append(reading.meterInstalltionReadingID + ",");
+                                    }
+                                    builder.Replace(",", ")", builder.Length - 1, 1);
+                                    ExecuteNonQuery(builder.ToString());
+                                }
+                            }
+
                             // Remove the CA from serialized JSON and save the revised JSON to the db.
                             jsonYear.contiguousAcres.RemoveAt(index);
                             SaveReportingSummary(new UserDalc().GetUser(userId),
@@ -584,11 +611,13 @@ from CafoUsageLookup;").AsEnumerable()
 		/// <param name="operatingYear"></param>
 		/// <returns></returns>
 		public static bool IsMeterReadingValidBeginReading(MeterReading reading, int operatingYear) {
-			return (reading.DateTime >= new DateTime(operatingYear - 1, 12, 15) && reading.DateTime < new DateTime(operatingYear, 1, 16));
+			//return (reading.DateTime >= new DateTime(operatingYear - 1, 12, 15) && reading.DateTime < new DateTime(operatingYear, 1, 16));
+            return (reading.ReadingType.GetValueOrDefault() == 1 && reading.ReportingYear.GetValueOrDefault() == operatingYear);
 		}
 
 		public static bool IsMeterReadingValidEndReading(MeterReading reading, int operatingYear) {
-			return (reading.DateTime >= new DateTime(operatingYear, 12, 15) && reading.DateTime < new DateTime(operatingYear + 1, 1, 16));
+			//return (reading.DateTime >= new DateTime(operatingYear, 12, 15) && reading.DateTime < new DateTime(operatingYear + 1, 1, 16));
+            return (reading.ReadingType.GetValueOrDefault() == 3 && reading.ReportingYear.GetValueOrDefault() == operatingYear);
 		}
 
 	}

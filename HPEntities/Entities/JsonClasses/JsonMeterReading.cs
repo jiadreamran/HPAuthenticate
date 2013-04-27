@@ -16,5 +16,6 @@ namespace HPEntities.Entities.JsonClasses {
 		public bool isValidBeginReading{ get; set; }
 		public bool isValidEndReading { get; set; }
 
+        public int meterInstalltionReadingID { get; set; }
 	}
 }
