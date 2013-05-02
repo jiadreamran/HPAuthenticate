@@ -17,9 +17,9 @@ namespace HPEntities.Entities.JsonClasses {
 		public JsonMeterReading[] readings { get; set; }
 
 		public int meterInstallationId { get; set; }
-		public int calculatedVolume { get; set; }
+		public int calculatedVolumeGallons { get; set; }
 		public bool acceptCalculation { get; set; }
-		public int userRevisedVolume { get; set; }
+		public int? userRevisedVolume { get; set; }
 		public int? userRevisedVolumeUnitId { get; set; }
 		public int totalVolumeAcreInches { get; set; }
 

@@ -102,6 +102,7 @@
     <Compile Include="Entities\PropertyAssociation.cs" />
     <Compile Include="Entities\PropertyDescription.cs" />
     <Compile Include="Entities\JsonClasses\ReportingSummary.cs" />
+    <Compile Include="Entities\ReportedVolume.cs" />
     <Compile Include="Entities\State.cs" />
     <Compile Include="Entities\Well.cs" />
     <Compile Include="Exceptions\MeterNotFoundException.cs" />
