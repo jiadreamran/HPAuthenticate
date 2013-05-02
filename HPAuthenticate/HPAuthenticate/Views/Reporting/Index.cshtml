@@ -95,6 +95,23 @@
 
 		})();
 
+        function _roundDesiredBankedInches(desiredBankedInches)
+        {
+            var desiredInches = util.round(desiredBankedInches);
+            var desiredInchesInt = Math.floor(desiredInches);
+            var fraction = desiredInches - desiredInchesInt;
+            // Rounding eg: 10.10 to 10.15 = 10.1; 10.16 to 10.19 = 10.2
+            var tenth = fraction * 10; // 10th = 0 to 10 (1.5)
+            tenth = Math.round(Math.floor(tenth) * 10); // (10)
+            var hundth = fraction * 100; // 100th = 0 to 99 (15)
+            hundth = Math.round(hundth - tenth);
+
+            tenth = hundth <= 5 ? tenth / 10 : tenth / 10 + 1;
+            desiredInches = desiredInchesInt + tenth / 10;
+
+            return desiredInches;
+        };
+
 		/// Given a collection of meter readings,
 		/// calculates the volume based on start/end
 		/// readings, also taking into consideration
@@ -1336,7 +1353,7 @@
 						// Update water banking section
 						$('#surplus_tag_' + contigAcres.number).text((surplusTotal >= 0 ? "surplus" : "deficit") + " of " + util.round(Math.abs(surplusTotal)) + " inches");
 						$('#max_bank_' + contigAcres.number).text(util.round(Math.max(surplusTotal, 0)));
-						$('#desired_bank_' + contigAcres.number).val(parseInt(Math.max(surplusTotal, 0)));
+						$('#desired_bank_' + contigAcres.number).val(_roundDesiredBankedInches(Math.max(surplusTotal, 0)));
 					};
 				})(summaryTable));
 
@@ -2023,7 +2040,7 @@
 
 <h2>Annual Report</h2>
 
-<p class="warning" id="reportingAvailabilityNotice">Usage reporting is only available from Dec. 15 through Mar. 1. At this time you will only be able to view past reports.</p>
+<p class="warning" id="reportingAvailabilityNotice">Usage reporting is only available from Dec. 15 through Jun. 1. At this time you will only be able to view past reports.</p>
 
 <div id='year_selector'></div>
 

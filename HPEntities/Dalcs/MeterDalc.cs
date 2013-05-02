@@ -91,7 +91,7 @@ where
 									 // As of 20121026, formula to calculate rollover value is:
 									 //		9 * (10^(num_digits - 1)) * multiplier
 									// RolloverValue = Math.Max(1, (int)Math.Round((Math.Pow(10, row["NumberOfDigits"].ToInteger()) - 1) * row["multiplier"].ToInteger())),
-                                     RolloverValue = Math.Max(1, (int)Math.Round((Math.Pow(10, row["NumberOfDigits"].ToInteger()) - 1) * (row["multiplier"] == DBNull.Value ? 1.0d : row["multiplier"].ToDouble()))),
+                                     RolloverValue = Math.Max(1, (int)Math.Round((Math.Pow(10, row["NumberOfDigits"].ToInteger()) - 1))),
 									 MeterType = GetMeterType(row["Manufacturer"].GetString(), row["MeterModel"].GetString()),
 									 Multiplier = (row["multiplier"] == DBNull.Value ? 1.0d : row["multiplier"].ToDouble()),
 									 UnitId = row["UnitId"].TryToInteger()
@@ -198,7 +198,7 @@ order by ReadingDate desc;", new Param("@mird", meterInstallationId),
 						MeterInstallationId = meter.MeterInstallationId,
 						MeterInstallationReadingId = 0, // This doesn't have a reading id because it's the initial reading
                         Rate = rateForNozzlePackage,
-						Reading = (int)meter.InitialReading.Value
+						Reading = (double)meter.InitialReading.Value
 					});
 				}
 			}
@@ -210,6 +210,9 @@ order by ReadingDate desc;", new Param("@mird", meterInstallationId),
         private double? TryToDouble(object o) 
         {
             double ret;
+            if (o == null)
+                return new double?();
+            
             bool hasValue = Double.TryParse(o.ToString(), out ret);
 
             if(hasValue)
@@ -238,11 +241,47 @@ from UnitsOfMeasure;").AsEnumerable().ToDictionary(
 				);
 		}
 
+        /*
+merge ReportingErrorResponses as target
+using (
+	select 
+		@actualUserId as actualUserId,
+		@actingUserId as actingUserId,
+		@wellId as wellId,
+		@meterInstallationId as meterInstallationId,
+		@errorResponse as errorResponse
+) as source on (
+	target.actualUserId = source.actualUserId
+	and target.actingUserId = source.actingUserId
+	and target.wellId = source.wellId
+	and target.meterInstallationId = source.meterInstallationId
+)
+when not matched then 
+	insert (
+		ActualUserId,
+		ActingUserId,
+		WellId,
+		MeterInstallationId,
+		ErrorResponse,
+		DateRecorded
+	) values (
+		source.actualUserId,
+		source.actingUserId,
+		source.wellId,
+		source.meterInstallationId,
+		source.errorResponse,
+		getdate()
+	)
+when matched then
+	update set
+		ErrorResponse = source.errorResponse,
+		DateRecorded = getdate();
+"*/
 
 		public bool SaveMeterReading(MeterReading reading, out string errorMessage) {
 			errorMessage = "";
 			try {
-				ExecuteNonQuery(@"
+				/*ExecuteNonQuery(@"
 insert into MeterInstallationReadings (
 	MeterInstallationID,
 	ReadingDate,
@@ -264,7 +303,50 @@ insert into MeterInstallationReadings (
 					new Param("@actingUserId", reading.ActingUserId),
 					new Param("@actualUserId", reading.ActualUserId),
 					new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value)
-				);
+				);*/
+                ExecuteNonQuery(@"
+merge MeterInstallationReadings as target
+using (
+	select 
+		@installationId as installationId,
+		@date as date,
+		@reading as reading,
+		@actingUserId as actingUserId,
+		@actualUserId as actualUserId,
+        @gpm as gpm
+) as source on (
+	target.MeterInstallationID = source.installationId
+	and target.ReadingDate = source.date
+	and target.Reading = source.reading
+	and target.ActingUserId = source.actingUserId
+    and target.ActualUserId = source.actualUserId
+)
+when not matched then 
+	insert (
+		MeterInstallationID,
+		ReadingDate,
+		Reading,
+		ActingUserId,
+		ActualUserId,
+		GallonsPerMinute
+	) values (
+		source.installationId,
+		source.date,
+		source.reading,
+		source.actingUserId,
+		source.actualUserId,
+		source.gpm
+	)
+when matched then
+	update set
+		MeterInstallationID = source.installationId;
+",
+                    new Param("@installationId", reading.MeterInstallationId),
+                    new Param("@date", reading.Date),
+                    new Param("@reading", reading.Reading.HasValue ? (object)reading.Reading.Value : DBNull.Value),
+                    new Param("@actingUserId", reading.ActingUserId),
+                    new Param("@actualUserId", reading.ActualUserId),
+                    new Param("@gpm", TryToDouble(reading.Rate) ?? (object)DBNull.Value));
 			} catch (Exception ex) {
 				errorMessage = ex.Message;
 				return false;
