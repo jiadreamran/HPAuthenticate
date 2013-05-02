@@ -125,12 +125,34 @@
 		/// readings, also taking into consideration
 		/// rate changes in middle readings and rollover
 		/// values.
-		function _calculateVolume(isNozzlePackage, rolloverValue, county, countyId, meterType, unitId, nonStandardUnits, meterMultiplier, readings, ca) {
-			if (typeOf(readings) != 'array' || readings.length < (isNozzlePackage ? 1 : 2)) {
+		function _calculateVolume(isNozzlePackage, isElectric, isNaturalGas, rolloverValue, county, countyId, meterType, unitId, nonStandardUnits, meterMultiplier, readings, ca) {
+			
+            if (typeOf(readings) != 'array'){
+                console.debug("Not enough readings in the raw reading array!");
+                _notEnoughReadings.push(true);
+				throw new Errors.NoReadingsException();
+            }
+
+            // First check if annual total reading type exists
+            var hasAnnualTotal = false;
+            var annualTotalReading;
+            for (var i = 0; i < readings.length; i++) {
+                if(readings[i].isAnnualTotalReading)
+                {
+                    hasAnnualTotal = true;
+                    annualTotalReading = readings[i];
+                    break;
+                }
+			}
+            console.debug("hasAnnualTotal: ", hasAnnualTotal);
+
+            if (readings.length < ((isNozzlePackage || hasAnnualTotal) ? 1 : 2)) {
                 console.debug("Not enough readings in the raw reading array!");
                 _notEnoughReadings.push(true);
 				throw new Errors.NoReadingsException();
 			}
+            
+
             //console.debug("readings: ", readings);
             console.debug("nonStandardUnits: ", nonStandardUnits); // mjia: if it is a water meter, the nonStandardUnits will be blank
 			// There are some readings, but maybe not all of them are valid for
@@ -140,12 +162,32 @@
 			validReadings = [];
 			// If this is a nozzle package, then all readings are valid.
 			if (!isNozzlePackage) {
-				for (var i = 0; i < readings.length; i++) {
-					if (readings[i].isValidBeginReading || readings[i].isValidEndReading) {
-						validReadings.push(readings[i]);
-					}
-				}
-                console.debug("valid readings: ", readings);
+                // mjia: Apr 29, 2013
+                // If a meter is natural gas or electric and has annual total reading, it will use only the annual total reading as source of calculation
+                if(isElectric || isNaturalGas)
+                {                  
+                    if(hasAnnualTotal)
+                    {
+                        validReadings.push(annualTotalReading);
+                    }
+                    else
+                    {
+                        for (var i = 0; i < readings.length; i++) {
+                            if (readings[i].isValidBeginReading || readings[i].isValidEndReading) {
+						        validReadings.push(readings[i]);
+					        }
+                        }
+                    }
+                }
+                else // This is a regular or third party meter
+                {
+				    for (var i = 0; i < readings.length; i++) {
+					    if (readings[i].isValidBeginReading || readings[i].isValidEndReading) {
+						    validReadings.push(readings[i]);
+					    }
+				    }
+                }
+                console.debug("valid readings: ", validReadings);
                 //***************************************************************************************************************
                 // Meng
                 // If the number of valid readings is 0, then the entire reading set is not valid, no need to deal with this case
@@ -156,48 +198,64 @@
                 else if(validReadings.length == 1)
                 {
                     ca.isFakingValidReadings = false;
-                    // If the only valid begin reading is the last reading, then the entire reading set is not valid
-                    if(validReadings[0].reading == readings[readings.length - 1].reading)
+//                    // If the only valid begin reading is the last reading, then the entire reading set is not valid
+//                    if(validReadings[0].reading == readings[readings.length - 1].reading)
+//                    {
+//                        // Do nothing
+//                    }			        
+//                    else
+//                    {
+//                        // Use the last reading as the valid end reading
+//                        if(validReadings[0].isValidBeginReading)
+//                            throw new Errors.NoEndReadingException();
+//                        else if(validReadings[0].isValidEndReading)
+//                            throw new Errors.NoBeginReadingException();
+//                        //ca.isFakingValidReadings = true;
+//                        //validReadings.push(readings[readings.length - 1]);
+//                    }
+                    if(!hasAnnualTotal)
                     {
-                        // Do nothing
-                    }			        
-                    else
-                    {
-                        // Use the last reading as the valid end reading
                         if(validReadings[0].isValidBeginReading)
                             throw new Errors.NoEndReadingException();
                         else if(validReadings[0].isValidEndReading)
                             throw new Errors.NoBeginReadingException();
-                        //ca.isFakingValidReadings = true;
-                        //validReadings.push(readings[readings.length - 1]);
                     }
                 }
                 readings = validReadings;
                 //console.debug("valid readings: ", readings);
                 //***************************************************************************************************************
 
-                console.debug("valid readings: ", readings);
-                var hasBeginReadingThisMeter = false;
-                // Check if there is a begin reading
-                for(var i = 0; i < readings.length; i++){
-                    if(readings[i].isValidBeginReading){
-                        hasBeginReadingThisMeter = true;
+                //console.debug("valid readings: ", readings);
+                // Only water meter and third party need this
+                if(!hasAnnualTotal)
+                {
+                    var hasBeginReadingThisMeter = false;
+                    // Check if there is a begin reading
+                    for(var i = 0; i < readings.length; i++){
+                        if(readings[i].isValidBeginReading){
+                            hasBeginReadingThisMeter = true;
+                        }
+                    }
+                    _hasBeginReading.push(hasBeginReadingThisMeter);
+                    if(!hasBeginReadingThisMeter){
+                        throw new Errors.NoBeginReadingException();
+                    }
+
+                    var hasEndReadingThisMeter = false;
+                    for(var i = 0; i < readings.length; i++)
+                    {
+                        if(readings[i].isValidEndReading)
+                            hasEndReadingThisMeter = true;
+                    }
+                    _hasEndReading.push(hasEndReadingThisMeter);
+                    if(!hasEndReadingThisMeter){
+                        throw new Errors.NoEndReadingException();
                     }
                 }
-                _hasBeginReading.push(hasBeginReadingThisMeter);
-                if(!hasBeginReadingThisMeter){
-                    throw new Errors.NoBeginReadingException();
-                }
-
-                var hasEndReadingThisMeter = false;
-                for(var i = 0; i < readings.length; i++)
+                else // If has annual total, begin and ending readings will be ignored
                 {
-                    if(readings[i].isValidEndReading)
-                        hasEndReadingThisMeter = true;
-                }
-                _hasEndReading.push(hasEndReadingThisMeter);
-                if(!hasEndReadingThisMeter){
-                    throw new Errors.NoEndReadingException();
+                    _hasBeginReading.push(true);
+                    _hasEndReading.push(true);
                 }
 
                 //console.debug("Has begin reading?: ", hasBeginReadingThisMeter);               
@@ -206,7 +264,8 @@
 			// At this point, if we don't have enough readings, throw an exception
 			// and warn the user.
             var notEnoughReadings = false;
-			if (readings.length < (isNozzlePackage ? 1 : 2)) {
+            // Also "hasAnnualTotal" is another condition
+			if (readings.length < (isNozzlePackage || hasAnnualTotal ? 1 : 2)) {
                 _notEnoughReadings.push(true);
 				throw new Errors.NoReadingsException();
 			}
@@ -225,9 +284,19 @@
 			if (isNozzlePackage) {
 				// HARDCODED: Convert GPH to GPM by *60
 				runningTotal = prevReading.reading * prevReading.rate * 60;
-				currentReading = prevReading; // In case there's only one. This is only applicable for nozzle packages.
+				currentReading = prevReading; // In case there's only one. This is only applicable for nozzle packages. mjia: now also for electric/gas with annual totals
 			}
+            else if (hasAnnualTotal)
+            {
+                // mjia: TODO: what the calculation logic? Currently using the raw value
+                // It seems right!           
+                currentReading = prevReading;
+                runningTotal = currentReading.reading;
+                console.debug("current reading annual total: ", currentReading);
+                console.debug("runningTotal annual: ", runningTotal);
+            }
 
+            // Starting from the second reading in valid readings array
 			while (i < readings.length) {
 				var currentReading = new Classes.MeterReading(readings[i].reading, readings[i].rate, unitId);
 				// If the meter is a nozzle package, we multiple the reading by rate and sum them.
@@ -236,7 +305,12 @@
 					// Multiply the reading (in hours) by the rate (in GPM) times 60 to get GPH
 					// HARDCODED: Unit assumptions, GPM -> GPH
 					runningTotal += currentReading.reading * currentReading.rate * 60;
-				} else {
+				}
+                // Annual total does not exist in this condition
+//                else if(hasAnnualTotal){                   
+//                    runningTotal = currentReading.reading * 10000;
+//                }
+                else {
 					if (currentReading.reading < prevReading.reading) {
 						// Meter rolled over.
 						delta = (rolloverValue - prevReading.reading) + currentReading.reading;
@@ -260,11 +334,14 @@
 				//console.debug('running total before: ' + runningTotal);
 				// Convert meter units as necessary - this will put runningTotal into ac-in.
 				runningTotal *= (_meterUnitConversionFactors[countyId][nonStandardUnits.toLowerCase()] || 1);
+                console.debug("multiplier county: ", _meterUnitConversionFactors[countyId][nonStandardUnits.toLowerCase()]);
+                console.debug("running total before unit converion: ", runningTotal);
+                console.debug("conversion factor: ", _unitConversionFactors[2][3]);
 				//console.debug('running total after: ' + runningTotal);
 
 				// Convert running total from ac-in to gallons.
 				// HARDCODED - unit IDs!
-				runningTotal *= _unitConversionFactors[2][3]
+				runningTotal *= _unitConversionFactors[2][3];
 				//console.debug('running total after ac-in to gal: ' + runningTotal);
 
 				ret.unitId = 3; // HARDCODED: Unit identifier, gallons == 3
@@ -273,7 +350,7 @@
 			var multiplier = (meterType.toLowerCase() == 'water meter' ? meterMultiplier : 1);
             //console.debug('Multiplier: ' + multiplier);
             multiplier = multiplier == 0 ? 1 : multiplier;
-            //console.debug('Revised multiplier: ' + multiplier);
+            console.debug('Revised multiplier: ' + multiplier);
 
 			ret.volume = runningTotal * multiplier;
 			return ret;
@@ -636,24 +713,53 @@
 					// TODO: if the meter doesn't exist anymore (was deleted), then we have no way to tell
 					// whether it was a nozzle package or not. Have to figure out a way around this somehow.
 					// May need to store nozzle package status on the meter reading itself
+                    // mjia: Apr 30, 2013: if an annual total (for electric/gas) exists, do not show any begin/end readings
 					var isNozzlePackage = reading.isNozzlePackage; //(meter ? meter.meterType.toLowerCase() === 'nozzle package' : false);
+                    var isElectric = reading.isElectric;
+                    var isNaturalGas = reading.isNaturalGas;
 
 					// Construct the Begin readings. The last value in the readings collection
 					// will be the ending reading.
 					var beginReadings = [];
-					var readingUnitId = reading.unitId;
-					for (var i = 0; i < reading.readings.length; i++) {
-						var r = reading.readings[i];
-						beginReadings.push(r.reading + (r.rate ? " @@ " + r.rate + ' gpm' : ''));
+                    var endingReading;
+                    if(!isElectric && ! isNaturalGas)
+                    {
+					    var readingUnitId = reading.unitId;
+					    for (var i = 0; i < reading.readings.length; i++) {
+						    var r = reading.readings[i];
+						    beginReadings.push(r.reading + (r.rate ? " @@ " + r.rate + ' gpm' : ''));
 
-					}
-					var endingReading = (isNozzlePackage ? null : beginReadings.pop());
+					    }                 
+					    endingReading = (isNozzlePackage ? null : beginReadings.pop());
+                    }
+                    else
+                    {
+                        var hasAnnualTotal = false;
+                        for (var i = 0; i < reading.readings.length; i++) {
+						    var r = reading.readings[i];
+						    if(r.isAnnualTotalReading){
+                                hasAnnualTotal = true;
+                                break;
+                            }
+					    }
+                        if(!hasAnnualTotal)
+                        {
+                            for (var i = 0; i < reading.readings.length; i++) {
+						        var r = reading.readings[i];
+						        beginReadings.push(r.reading + (r.rate ? " @@ " + r.rate + ' gpm' : ''));
 
+					        }                 
+					        endingReading = (isNozzlePackage ? null : beginReadings.pop());
+                        }
+                        else{ 
+                            // Do nothing
+                        }
+                    }
 					var calcVol = null;
 					var calcVolTd = $('<td></td>');
 					try {
                         //console.debug("Raw reading: ", reading);
-						calcVol = _calculateVolume(reading.isNozzlePackage, reading.rolloverValue, reading.county, reading.countyId, reading.meterType, reading.unitId, reading.nonStandardUnits, reading.meterMultiplier, reading.readings, contigAcres);
+						calcVol = _calculateVolume(reading.isNozzlePackage, reading.isElectric, reading.isNaturalGas, reading.rolloverValue, reading.county, reading.countyId, reading.meterType, reading.unitId, reading.nonStandardUnits, reading.meterMultiplier, reading.readings, contigAcres);
 						calcVolTd.text(util.round(calcVol.volume));
 						if (calcVol.rolloverOccurred) {
 							// Present a warning icon to the user
