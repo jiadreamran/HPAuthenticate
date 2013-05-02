@@ -222,7 +222,6 @@
     <None Include="Properties\DataSources\HPAuthWcf.Entities.User.datasource" />
     <Content Include="assets\js\swfobject.js" />
     <Content Include="Models\readme.txt" />
-    <Content Include="Newtonsoft.Json.dll" />
     <Content Include="Views\Reporting\Change_Log.txt" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>

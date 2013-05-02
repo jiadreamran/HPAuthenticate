@@ -36,7 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="libMatt">
-      <HintPath>..\..\libMatt\libMatt\bin\Release\libMatt.dll</HintPath>
+      <HintPath>..\..\libMatt\libMatt\bin\Debug\libMatt.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

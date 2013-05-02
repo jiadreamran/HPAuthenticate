@@ -287,7 +287,8 @@ using (
 		@actualUserId as actualUserId,
 		@actingUserId as actingUserId,
 		@calcVolGals as calcVolGals,
-		@userRevisedVolGals as userRevisedVolGals
+		@userRevisedVolGals as userRevisedVolGals,
+        @userRevisedVolUnits as userRevisedVolUnitId
 ) as source on (
 	target.ContiguousAcresId = source.caId
 	and target.MeterInstallationId = source.miid
@@ -299,6 +300,7 @@ when matched then
 		ActingUserId = source.actingUserId,
 		CalculatedVolumeGallons = source.calcVolGals,
 		UserRevisedVolumeGallons = source.userRevisedVolGals,
+        UserRevisedVolumeUnitId = source.userRevisedVolUnitId,
 		SubmitDatetime = GETDATE()
 when not matched then
 	insert (
@@ -309,6 +311,7 @@ when not matched then
 		ActingUserId,
 		CalculatedVolumeGallons,
 		UserRevisedVolumeGallons,
+        UserRevisedVolumeUnitId,
 		SubmitDatetime
 	) values (
 		source.miid,
@@ -318,6 +321,7 @@ when not matched then
 		source.actingUserId,
 		source.calcVolGals,
 		source.userRevisedVolGals,
+        source.userRevisedVolUnitId,
 		GETDATE()
 	);",
 								new Param("@caId", ca.number),

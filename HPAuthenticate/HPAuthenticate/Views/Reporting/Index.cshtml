@@ -90,6 +90,12 @@
                         this._super(message);
                         this.name = 'NoBeginReadingException';
                     }
+                }),
+                NoEndReadingException: Exception.extend({
+                    init: function(message){
+                        this._super(message);
+                        this.name = 'NoEndReadingException';
+                    }
                 })
 			};
 
@@ -161,10 +167,10 @@
                     }			        
                     else
                     {
-                        // Use the last reading as the valid end reading
-                        //throw new Errors.NoReadingsException();
-                        ret.fakedEndReading = true;
-                        validReadings.push(readings[readings.length - 1]);
+                        if(validReadings[0].isValidBeginReading)
+                            throw new Errors.NoEndReadingException();
+                        else if(validReadings[0].isValidEndReading)
+                            throw new Errors.NoBeginReadingException();
                     }
                 }
                 readings = validReadings;
@@ -188,6 +194,17 @@
             if(!hasBeginReading){
                 throw new Errors.NoBeginReadingException();
             }
+
+            var hasEndReadingThisMeter = false;
+            for(var i = 0; i < readings.length; i++)
+            {
+                if(readings[i].isValidEndReading)
+                    hasEndReadingThisMeter = true;
+            }
+            if(!hasEndReadingThisMeter){
+                throw new Errors.NoEndReadingException();
+            }
+
 
 			if (rolloverValue <= 0) {
 				throw new Errors.InvalidRolloverException('Unable to calculate volume; meter rollover value ("' + rolloverValue + '") is not valid.');
@@ -404,9 +421,6 @@
 		};
 
         
-        // Two cases where the submit button will get disabled:
-        // 1) One of the meters does not have a valid begin reading
-        // 2) It is not reporting period and the user is not an admin
         function _canSubmit(ca)
         {
             var allowed = reportingSummary.state.isReportingAllowed;
@@ -602,6 +616,13 @@
 									.ready(function() {
 										$(calcVolTd).tipsy({gravity: 's'});
 									});
+                } else if (e.name == 'NoEndReadingException') {
+					calcVol.volume = 0;
+					calcVolTd.text("0").addClass('warning')
+							.attr('title', 'No valid end reading reported! Unable to submit volume. (Note: end reading starts from Dec. 15 to Jan. 15 (next year))')
+							.ready(function() {
+								$(calcVolTd).tipsy({gravity: 's'});
+							});									
                 } else {
 					throw e
 				}
@@ -1412,6 +1433,8 @@
 				if (contigAcres.isSubmitted || !isEditable || !contigAcres.isCurrentUserOwner) {
 					// Disable all the fields...
 					container.find('input, select').attr('disabled', 'disabled');
+					
+
 
 					if (contigAcres.isSubmitted) {
 						container.append(
@@ -1456,7 +1479,7 @@
 								//		time permitting, add it here for performance.
 								if (config.isCafoDeployed) {
 									var cafoAr = [];
-									$('tr.cafo-row').each(function() {
+									$('tr.caid_' + contigAcres.number + ' tr.cafo-row').each(function() {
 										var cafoObj = $(this).data('cafoObj');
 										// Update the values on the CAFO
 										cafoObj.cafoId = parseInt($(this).find('select.cafoType').val());
@@ -1477,6 +1500,14 @@
 									// what's displayed in the table
 									contigAcres.cafos = cafoAr;
 								}
+
+								// Update caObj user-revised volumes
+								$('tr.caid_' + contigAcres.number + ' tr.meter_usage_row').each(function() {
+									var rc = $(this).data('readingContainer');
+									contigAcres.meterReadings[rc.id].acceptCalculation = rc.acceptCalculation;
+									contigAcres.meterReadings[rc.id].userRevisedVolume = rc.userRevisedVolume;
+									contigAcres.meterReadings[rc.id].userRevisedVolumeUnitId = rc.userRevisedVolumeUnitId;
+								});
 
 								// For debugging purposes.								
 								if (config.preventSubmit) { 
@@ -1832,6 +1863,11 @@
 						break;
 				}
 
+				if (caObj.isSubmitted || year != reportingSummary.state.currentReportingYear || !caObj.isCurrentUserOwner) {
+					// Disable CAFO section. This is already done for the standard section.
+					cafoSection.find('input, select').attr('disabled', 'disabled');
+				}
+
 				tr.find('td:first-child span.toggle').removeClass('expand');
 
 			}, // resetWellMeterTable
@@ -1940,22 +1976,6 @@
 							.addClass(caObj.isSubmitted ? 'submitted' : 'unsubmitted')
 							.text(caObj.isSubmitted ? 'Submitted' : 'Unsubmitted')
 					).append(
-/* <<<<<<< AlternateIndex.cshtml
-						// Special circumstances checkbox - as of 2012.11.16, do not add
-						// If we ever add this back, on the next line down below, adjust the
-						// "find" criteria to be 'td:not(:last-child)' instead of just 'td'.
-						// $('<label>Wells on this CA cannot produce 1.25 AF/ac</label>').prepend(chkbox)
-					).find('td').click(clickHandler).end()
-					// Add a click handler to all TDs except the last ones (containing the
-					// label/checkbox combo, which handles resetting the meter table on their own)
-
-				);
-
-
-			}
-
-			$('#rptg_summary').empty().append($('<h3>Contiguous Acres</h3>')).append(caList);
-======= */
 						$('<td></td>')
 							.append(
 								// Is the current user the owner of the CA?
@@ -1964,58 +1984,64 @@
 									? $('<span>You are responsible for annual reporting on this CA.</span>')
 									// Else, display a link to mail the true owner.
 									: $('<label>You are not responsible </label>'
-                                    ).append($('<a></a>').attr('href', '#').text('Email Responsible Party').click(function(e) {
-										e.stopPropagation();
-										e.preventDefault();
-										// Display a form allowing the user to compose a message
-										// to the CA owner.
-										$('<div></div>').append(
-											$('<h2>Contact Owner of ' + caObj.description + '</h2>')
-										).append(
-											$('<p>Compose your message below, then click "Send" to email the owner of these contiguous acres. (Note: Your email address will be visible to the owner and he will be able to reply directly to that address.)</p>')
-										).append(
-											$('<p style="margin-bottom:0"><strong>From:</strong> ' + currentUserEmailAddress + '</p>')
-										).append(
-											$('<label><strong>Message:</strong><br /><textarea style="width:100%" id="contactCAOwnerMessage"></textarea></label>')
-										).append(
-											$('<input type="button" value="Send"></input>').click(function(e) {
-												// Update the status indicator, disable the send/cancel buttons
-												// during send
-												var statusEl = $(this).closest('div').find('input,textarea').attr('disabled', 'disabled').end().find('.status').addClass('ajax_loading').text('Sending message...');
-												$.ajax(
-													'Reporting/EmailCAOwner',
-													{
-														type:'POST',
-														data:{
-															caId:caObj.number,
-															message:$('#contactCAOwnerMessage').val()
-														},
-														complete: function() {
-															statusEl.removeClass('ajax_loading');
-														},
-														success:function(data, textStatus, jqXHR) {
-															if (data.Status.Success) {
-																statusEl.addClass('success').text('Message sent.');
-																setTimeout($.modal.close, 1000);
-															} else {
+                                    ).append($('<a></a>').text('Email Responsible Party')
+	                                    .attr('href', '#')
+	                                    .attr('rowCaDesc', caObj.description)
+	                                    .attr('rowCaId', caObj.number)
+	                                    .click(function(e) {
+											e.stopPropagation();
+											e.preventDefault();
+	                                        var rowCaDesc = $(this).attr('rowCaDesc');
+	                                        var rowCaId = $(this).attr('rowCaId');											
+											// Display a form allowing the user to compose a message
+											// to the CA owner.
+											$('<div></div>').append(
+												$('<h2>Contact Owner of ' + rowCaDesc + '</h2>')
+											).append(
+												$('<p>Compose your message below, then click "Send" to email the owner of these contiguous acres. (Note: Your email address will be visible to the owner and he will be able to reply directly to that address.)</p>')
+											).append(
+												$('<p style="margin-bottom:0"><strong>From:</strong> ' + currentUserEmailAddress + '</p>')
+											).append(
+												$('<label><strong>Message:</strong><br /><textarea style="width:100%" id="contactCAOwnerMessage"></textarea></label>')
+											).append(
+												$('<input type="button" value="Send"></input>').click(function(e) {
+													// Update the status indicator, disable the send/cancel buttons
+													// during send
+													var statusEl = $(this).closest('div').find('input,textarea').attr('disabled', 'disabled').end().find('.status').addClass('ajax_loading').text('Sending message...');
+													$.ajax(
+														'Reporting/EmailCAOwner',
+														{
+															type:'POST',
+															data:{
+																caId:rowCaId,
+																message:$('#contactCAOwnerMessage').val()
+															},
+															complete: function() {
+																statusEl.removeClass('ajax_loading');
+															},
+															success:function(data, textStatus, jqXHR) {
+																if (data.Status.Success) {
+																	statusEl.addClass('success').text('Message sent.');
+																	setTimeout($.modal.close, 1000);
+																} else {
+																	$(this).closest('div').find('input,textarea').removeAttr('disabled');
+																	statusEl.addClass('error'.text(data.Status.Errors.join(' ')));
+																}
+															},
+															error: function(jqXHR, textStatus, errorThrown) {
 																$(this).closest('div').find('input,textarea').removeAttr('disabled');
-																statusEl.addClass('error'.text(data.Status.Errors.join(' ')));
+																statusEl.addClass('error').text(errorThrown);
 															}
-														},
-														error: function(jqXHR, textStatus, errorThrown) {
-															$(this).closest('div').find('input,textarea').removeAttr('disabled');
-															statusEl.addClass('error').text(errorThrown);
 														}
-													}
-												);
-											})
-										).append(
-											$('<input type="button" value="Cancel"></input>').click(function(e) {
-												$.modal.close();
-											})
-										).append(
-											$('<br /><span class="status"></span>')
-										).modal();
+													);
+												})
+											).append(
+												$('<input type="button" value="Cancel"></input>').click(function(e) {
+													$.modal.close();
+												})
+											).append(
+												$('<br /><span class="status"></span>')
+											).modal();
 									})
 							))
 					).click(clickHandler)
