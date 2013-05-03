@@ -435,7 +435,7 @@
 			for (var unitId in _state.unitDefinitions) {
 				// HARDCODE
 				// Warning - note hardcoded unit identifier 3 to default select Gallons
-                console.debug("_state.unitDefinitions", _state.unitDefinitions);
+                //console.debug("_state.unitDefinitions", _state.unitDefinitions);
 				sel.append('<option value="' + unitId + '"' + (unitId == 3 ? 'selected="selected"' : '') + '>' + _state.unitDefinitions[unitId] + '</option>');
 			}
 
@@ -752,7 +752,8 @@
 					        endingReading = (isNozzlePackage ? null : beginReadings.pop());
                         }
                         else{ 
-                            // Do nothing
+                            beginReadings = [];
+                            endingReading = null;
                         }
                     }
 					var calcVol = null;
@@ -899,7 +900,7 @@
 									// Warning! This depends on UnitOfMeasurementIDs remaining consistent!
 									// This assumes gallons == 3 and acre-inches == 2.
 									//cFactor = _unitConversionFactors[3][2];
-                                    console.debug("_unitConversionFactors", _unitConversionFactors);
+                                    //console.debug("_unitConversionFactors", _unitConversionFactors);
                                     					//cFactor = (_unitConversionFactors[calcVol.unitId] || [1,1])[2];                                  
                                     					cFactor = (_unitConversionFactors[row.data('calcVol').unitId] || [1,1])[2];                                  
 									volume = (row.data('calcVol') || { volume: 0 }).volume;
@@ -911,8 +912,8 @@
 									volume = parseInt($('#user_revised_vol_' + ca.number + '_' + miid).val());
 								}
 
-                                console.debug("cFactor: ", cFactor);
-                                console.debug("volume: ", volume);
+                                //console.debug("cFactor: ", cFactor);
+                                //console.debug("volume: ", volume);
 								// Display to 3 decimal places, converted to ac-in
 								volume = (Math.round(1000 * (volume * cFactor)) / 1000) || 0;
 
