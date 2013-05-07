@@ -626,5 +626,8 @@ from CafoUsageLookup;").AsEnumerable()
             return (reading.ReadingType.GetValueOrDefault() == 3 && reading.ReportingYear.GetValueOrDefault() == operatingYear);
 		}
 
+        public static bool IsMeterReadingAnnualTotal(MeterReading reading, int operatingYear) {
+            return (reading.ReadingType.GetValueOrDefault() == 4 && reading.ReportingYear.GetValueOrDefault() == operatingYear);
+        }
 	}
 }

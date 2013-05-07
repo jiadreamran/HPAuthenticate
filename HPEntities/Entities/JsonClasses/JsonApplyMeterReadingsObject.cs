@@ -10,8 +10,6 @@ namespace HPEntities.Entities.JsonClasses
     /// A reading object from the mapping application (Flex side). Used specifically for "ApplyReadingEdits"
     /// Contains two arrays: adds and deletes
     /// </summary>
-
-    /// </summary>
     public class JsonApplyMeterReadingsObject
     {
         public JsonFlexMeterReadingObject[] adds { get; set; }
