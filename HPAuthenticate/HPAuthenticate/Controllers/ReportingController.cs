@@ -480,6 +480,33 @@ namespace HPAuthenticate.Controllers {
                     errors.Add("One of the meters does not have valid begin readings for volume calculation.");
             }
              */
+            foreach (var mr in ca.meterReadings)
+            {
+
+                // If this is an annual reading or if the user supplied a revised volume, this validation doesn't matter.
+                if (!mr.Value.readings.Any(x => x.isAnnualTotalReading)
+                    && mr.Value.userRevisedVolume.GetValueOrDefault(0) <= 0)
+                {
+                    if (mr.Value.readings.Length < 2)
+                    {
+                        // Too few readings.
+                        errors.Add("One of the meters does not have enough valid readings for volume calculation.");
+                    } else if (!mr.Value.readings.Any(x => x.isValidBeginReading)) {
+                        // Need both a valid begin and a valid end reading.
+                        // Note that the above check is not good - it depends on a value
+                        // sent by the client.
+                        // TODO: Refactor this to not rely on .isValidBeginReading; get
+                        // the values needed to validate meter reading against the database
+                        // using the methods in ReportingDalc.
+                        errors.Add("One of the meters does not have valid begin readings for volume calculation.");
+                    } else if (!mr.Value.readings.Any(x => x.isValidEndReading)) {
+                        // TODO: See above comment regarding trusting vlient values.
+                        errors.Add("One of the meters does not have valid ending readings for volume calculation.");
+                    }
+                }
+            }
+
+
 			// Ensure the CA actually exists in the database.
 			if (!new GisDalc().ContiguousAcresExists(ca.number)) {
 				errors.Add("The specified contiguous area (ID: " + ca.number + ") does not exist.");

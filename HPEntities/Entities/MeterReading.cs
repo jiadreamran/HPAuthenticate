@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HPEntities.Entities.Enums;
+using HPEntities.Entities.JsonClasses;
 
 namespace HPEntities.Entities {
 	public class MeterReading {
